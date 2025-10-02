@@ -54,6 +54,7 @@ export class ListSorterComponent {
   
   // Sessions
   protected sessions = signal<SortSession[]>([]);
+  protected currentSessionId = signal<string | undefined>(undefined);
   
   // Computed
   protected canAddItem = computed(() => 
@@ -105,8 +106,9 @@ export class ListSorterComponent {
       this.sortedItems.set(sorted);
       this.showResults.set(true);
       
-      // Save to database
+      // Save to database (update existing or create new)
       const session: SortSession = {
+        _id: this.currentSessionId(),
         listName: this.listName(),
         items: this.items(),
         sortedItems: sorted,
@@ -115,7 +117,17 @@ export class ListSorterComponent {
         completedAt: new Date()
       };
       
+      // If updating an existing session, get the _rev
+      if (this.currentSessionId()) {
+        const existing = await this.databaseService.getSortSession(this.currentSessionId()!);
+        if (existing && existing._rev) {
+          session._rev = existing._rev;
+          session.createdAt = existing.createdAt; // Keep original creation date
+        }
+      }
+      
       await this.databaseService.saveSortSession(session);
+      this.currentSessionId.set(session._id); // Store the session ID
       await this.loadSessions();
       
       this.snackBar.open('Sort completed and saved!', 'Close', { duration: 3000 });
@@ -146,16 +158,23 @@ export class ListSorterComponent {
     this.listName.set('');
     this.sortedItems.set([]);
     this.showResults.set(false);
+    this.currentSessionId.set(undefined);
   }
 
   async loadSession(session: SortSession): Promise<void> {
     this.listName.set(session.listName);
     this.items.set([...session.items]);
+    this.currentSessionId.set(session._id);
+    
     if (session.sortedItems) {
       this.sortedItems.set([...session.sortedItems]);
       this.showResults.set(true);
+    } else {
+      this.sortedItems.set([]);
+      this.showResults.set(false);
     }
-    this.snackBar.open('Session loaded', 'Close', { duration: 2000 });
+    
+    this.snackBar.open('Session loaded - you can add more items and re-sort', 'Close', { duration: 3000 });
   }
 
   async deleteSession(session: SortSession): Promise<void> {

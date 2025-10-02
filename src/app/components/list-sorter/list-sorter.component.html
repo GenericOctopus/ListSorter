@@ -3,8 +3,8 @@
     <!-- Input Section -->
     <mat-card class="input-card" *ngIf="!sortState().isActive && !showResults()">
       <mat-card-header>
-        <mat-card-title>Create Your List</mat-card-title>
-        <mat-card-subtitle>Add items to sort based on your preferences</mat-card-subtitle>
+        <mat-card-title>{{ currentSessionId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
+        <mat-card-subtitle>{{ currentSessionId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
@@ -56,7 +56,7 @@
           (click)="startSort()"
           [disabled]="!canStartSort()">
           <mat-icon>sort</mat-icon>
-          Start Sorting
+          {{ currentSessionId() ? 'Re-Sort List' : 'Start Sorting' }}
         </button>
         <button 
           mat-button 
@@ -151,6 +151,10 @@
       </mat-card-content>
 
       <mat-card-actions>
+        <button mat-raised-button color="accent" (click)="showResults.set(false)">
+          <mat-icon>edit</mat-icon>
+          Add More Items
+        </button>
         <button mat-raised-button color="primary" (click)="clearList()">
           <mat-icon>add</mat-icon>
           Create New List
