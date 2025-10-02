@@ -37,24 +37,37 @@ mat-card {
   width: 100%;
 }
 
-.items-list {
-  margin-top: 1.5rem;
+.input-card {
+  .file-upload-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(103, 126, 234, 0.05);
+    border-radius: 8px;
+    border: 2px dashed rgba(103, 126, 234, 0.3);
+    text-align: center;
 
-  h3 {
-    margin-bottom: 1rem;
-    color: rgba(0, 0, 0, 0.87);
-    font-size: 1.1rem;
-    font-weight: 500;
+    button {
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
   }
 
-  mat-chip-set {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
+  .items-list {
+    margin-top: 1.5rem;
 
-  mat-chip {
-    font-size: 0.95rem;
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    mat-chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
   }
 }
 

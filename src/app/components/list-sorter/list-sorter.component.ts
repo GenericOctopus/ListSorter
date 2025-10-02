@@ -215,6 +215,69 @@ export class ListSorterComponent {
     }
   }
 
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      this.parseFileContent(content, file.name);
+      // Reset the input so the same file can be selected again
+      input.value = '';
+    };
+
+    reader.onerror = () => {
+      this.snackBar.open('Error reading file', 'Close', { duration: 3000 });
+    };
+
+    reader.readAsText(file);
+  }
+
+  private parseFileContent(content: string, filename: string): void {
+    const isCsv = filename.toLowerCase().endsWith('.csv');
+    let newItems: string[] = [];
+
+    if (isCsv) {
+      // Parse CSV - handle both comma and semicolon separators
+      const lines = content.split(/\r?\n/);
+      
+      for (const line of lines) {
+        // Try comma first, then semicolon
+        const items = line.includes(',') 
+          ? line.split(',') 
+          : line.split(';');
+        
+        newItems.push(...items.map(item => item.trim()).filter(item => item.length > 0));
+      }
+    } else {
+      // Parse TXT - one item per line
+      newItems = content
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+    }
+
+    // Add unique items to the list
+    const currentItems = this.items();
+    const uniqueNewItems = newItems.filter(item => !currentItems.includes(item));
+    
+    if (uniqueNewItems.length > 0) {
+      this.items.update(items => [...items, ...uniqueNewItems]);
+      this.snackBar.open(
+        `Added ${uniqueNewItems.length} item${uniqueNewItems.length !== 1 ? 's' : ''} from file`,
+        'Close',
+        { duration: 3000 }
+      );
+    } else {
+      this.snackBar.open('No new items found in file', 'Close', { duration: 3000 });
+    }
+  }
+
   private calculateTiers(sortedItems: string[]): TierGroup[] {
     if (sortedItems.length === 0) return [];
     

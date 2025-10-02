@@ -36,6 +36,22 @@
           </button>
         </mat-form-field>
 
+        <div class="file-upload-section">
+          <input 
+            #fileInput 
+            type="file" 
+            accept=".txt,.csv" 
+            (change)="onFileSelected($event)"
+            style="display: none">
+          <button 
+            mat-stroked-button 
+            (click)="fileInput.click()"
+            [disabled]="sortState().isActive">
+            <mat-icon>upload_file</mat-icon>
+            Import from File (TXT/CSV)
+          </button>
+        </div>
+
         <div class="items-list" *ngIf="items().length > 0">
           <h3>Items ({{ items().length }})</h3>
           <mat-chip-set>
