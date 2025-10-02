@@ -12,7 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-import { DatabaseService, SortSession } from '../../services/database.service';
+import { DatabaseService, SortSession, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
 
 @Component({
@@ -50,6 +50,7 @@ export class ListSorterComponent {
   });
   
   protected sortedItems = signal<string[]>([]);
+  protected tieredItems = signal<TierGroup[]>([]);
   protected showResults = signal(false);
   
   // Sessions
@@ -104,6 +105,11 @@ export class ListSorterComponent {
     try {
       const sorted = await this.mergeSortService.startSort(this.items());
       this.sortedItems.set(sorted);
+      
+      // Calculate tiers
+      const tiers = this.calculateTiers(sorted);
+      this.tieredItems.set(tiers);
+      
       this.showResults.set(true);
       
       // Save to database (update existing or create new)
@@ -112,6 +118,7 @@ export class ListSorterComponent {
         listName: this.listName(),
         items: this.items(),
         sortedItems: sorted,
+        tieredItems: tiers,
         completed: true,
         createdAt: new Date(),
         completedAt: new Date()
@@ -157,6 +164,7 @@ export class ListSorterComponent {
     this.currentItem.set('');
     this.listName.set('');
     this.sortedItems.set([]);
+    this.tieredItems.set([]);
     this.showResults.set(false);
     this.currentSessionId.set(undefined);
   }
@@ -168,9 +176,18 @@ export class ListSorterComponent {
     
     if (session.sortedItems) {
       this.sortedItems.set([...session.sortedItems]);
+      
+      // Load or recalculate tiers
+      if (session.tieredItems) {
+        this.tieredItems.set([...session.tieredItems]);
+      } else {
+        this.tieredItems.set(this.calculateTiers(session.sortedItems));
+      }
+      
       this.showResults.set(true);
     } else {
       this.sortedItems.set([]);
+      this.tieredItems.set([]);
       this.showResults.set(false);
     }
     
@@ -196,5 +213,42 @@ export class ListSorterComponent {
     if (event.key === 'Enter') {
       this.addItem();
     }
+  }
+
+  private calculateTiers(sortedItems: string[]): TierGroup[] {
+    if (sortedItems.length === 0) return [];
+    
+    const tierNames = ['S', 'A', 'B', 'C', 'D', 'F'];
+    const itemCount = sortedItems.length;
+    
+    // Calculate tier sizes based on item count
+    // S tier: top ~10%, A: next ~20%, B: next ~30%, C: next ~25%, D: next ~10%, F: bottom ~5%
+    const tierPercentages = [0.10, 0.20, 0.30, 0.25, 0.10, 0.05];
+    
+    const tiers: TierGroup[] = [];
+    let currentIndex = 0;
+    
+    for (let i = 0; i < tierNames.length && currentIndex < itemCount; i++) {
+      const tierSize = Math.max(1, Math.round(itemCount * tierPercentages[i]));
+      const endIndex = Math.min(currentIndex + tierSize, itemCount);
+      
+      if (currentIndex < itemCount) {
+        tiers.push({
+          tier: tierNames[i],
+          items: sortedItems.slice(currentIndex, endIndex)
+        });
+        currentIndex = endIndex;
+      }
+    }
+    
+    // If there are remaining items (due to rounding), add them to the last tier
+    if (currentIndex < itemCount) {
+      const lastTier = tiers[tiers.length - 1];
+      if (lastTier) {
+        lastTier.items.push(...sortedItems.slice(currentIndex));
+      }
+    }
+    
+    return tiers;
   }
 }

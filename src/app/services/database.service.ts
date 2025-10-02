@@ -9,12 +9,18 @@ export interface ListItem {
   createdAt: Date;
 }
 
+export interface TierGroup {
+  tier: string;
+  items: string[];
+}
+
 export interface SortSession {
   _id?: string;
   _rev?: string;
   listName: string;
   items: string[];
   sortedItems?: string[];
+  tieredItems?: TierGroup[];
   completed: boolean;
   createdAt: Date;
   completedAt?: Date;
