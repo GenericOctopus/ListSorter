@@ -12,7 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-import { DatabaseService, SortSession, TierGroup } from '../../services/database.service';
+import { DatabaseService, SortedList, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
 
 @Component({
@@ -53,9 +53,9 @@ export class ListSorterComponent {
   protected tieredItems = signal<TierGroup[]>([]);
   protected showResults = signal(false);
   
-  // Sessions
-  protected sessions = signal<SortSession[]>([]);
-  protected currentSessionId = signal<string | undefined>(undefined);
+  // Lists
+  protected lists = signal<SortedList[]>([]);
+  protected currentListId = signal<string | undefined>(undefined);
   
   // Computed
   protected canAddItem = computed(() => 
@@ -78,7 +78,7 @@ export class ListSorterComponent {
       this.sortState.set(state);
     });
     
-    this.loadSessions();
+    this.loadLists();
   }
 
   addItem(): void {
@@ -113,8 +113,8 @@ export class ListSorterComponent {
       this.showResults.set(true);
       
       // Save to database (update existing or create new)
-      const session: SortSession = {
-        _id: this.currentSessionId(),
+      const list: SortedList = {
+        _id: this.currentListId(),
         listName: this.listName(),
         items: this.items(),
         sortedItems: sorted,
@@ -124,18 +124,18 @@ export class ListSorterComponent {
         completedAt: new Date()
       };
       
-      // If updating an existing session, get the _rev
-      if (this.currentSessionId()) {
-        const existing = await this.databaseService.getSortSession(this.currentSessionId()!);
+      // If updating an existing list, get the _rev
+      if (this.currentListId()) {
+        const existing = await this.databaseService.getSortedList(this.currentListId()!);
         if (existing && existing._rev) {
-          session._rev = existing._rev;
-          session.createdAt = existing.createdAt; // Keep original creation date
+          list._rev = existing._rev;
+          list.createdAt = existing.createdAt; // Keep original creation date
         }
       }
       
-      await this.databaseService.saveSortSession(session);
-      this.currentSessionId.set(session._id); // Store the session ID
-      await this.loadSessions();
+      await this.databaseService.saveSortedList(list);
+      this.currentListId.set(list._id); // Store the list ID
+      await this.loadLists();
       
       this.snackBar.open('Sort completed and saved!', 'Close', { duration: 3000 });
     } catch (error) {
@@ -166,22 +166,22 @@ export class ListSorterComponent {
     this.sortedItems.set([]);
     this.tieredItems.set([]);
     this.showResults.set(false);
-    this.currentSessionId.set(undefined);
+    this.currentListId.set(undefined);
   }
 
-  async loadSession(session: SortSession): Promise<void> {
-    this.listName.set(session.listName);
-    this.items.set([...session.items]);
-    this.currentSessionId.set(session._id);
+  async loadList(list: SortedList): Promise<void> {
+    this.listName.set(list.listName);
+    this.items.set([...list.items]);
+    this.currentListId.set(list._id);
     
-    if (session.sortedItems) {
-      this.sortedItems.set([...session.sortedItems]);
+    if (list.sortedItems) {
+      this.sortedItems.set([...list.sortedItems]);
       
       // Load or recalculate tiers
-      if (session.tieredItems) {
-        this.tieredItems.set([...session.tieredItems]);
+      if (list.tieredItems) {
+        this.tieredItems.set([...list.tieredItems]);
       } else {
-        this.tieredItems.set(this.calculateTiers(session.sortedItems));
+        this.tieredItems.set(this.calculateTiers(list.sortedItems));
       }
       
       this.showResults.set(true);
@@ -191,20 +191,20 @@ export class ListSorterComponent {
       this.showResults.set(false);
     }
     
-    this.snackBar.open('Session loaded - you can add more items and re-sort', 'Close', { duration: 3000 });
+    this.snackBar.open('List loaded - you can add more items and re-sort', 'Close', { duration: 3000 });
   }
 
-  async deleteSession(session: SortSession): Promise<void> {
-    if (session._id) {
-      await this.databaseService.deleteSession(session._id);
-      await this.loadSessions();
-      this.snackBar.open('Session deleted', 'Close', { duration: 2000 });
+  async deleteList(list: SortedList): Promise<void> {
+    if (list._id) {
+      await this.databaseService.deleteList(list._id);
+      await this.loadLists();
+      this.snackBar.open('List deleted', 'Close', { duration: 2000 });
     }
   }
 
-  private async loadSessions(): Promise<void> {
-    const sessions = await this.databaseService.getAllSessions();
-    this.sessions.set(sessions.sort((a, b) => 
+  private async loadLists(): Promise<void> {
+    const lists = await this.databaseService.getAllLists();
+    this.lists.set(lists.sort((a: SortedList, b: SortedList) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     ));
   }

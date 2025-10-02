@@ -3,8 +3,8 @@
     <!-- Input Section -->
     <mat-card class="input-card" *ngIf="!sortState().isActive && !showResults()">
       <mat-card-header>
-        <mat-card-title>{{ currentSessionId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
-        <mat-card-subtitle>{{ currentSessionId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
+        <mat-card-title>{{ currentListId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
+        <mat-card-subtitle>{{ currentListId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
@@ -72,7 +72,7 @@
           (click)="startSort()"
           [disabled]="!canStartSort()">
           <mat-icon>sort</mat-icon>
-          {{ currentSessionId() ? 'Re-Sort List' : 'Start Sorting' }}
+          {{ currentListId() ? 'Re-Sort List' : 'Start Sorting' }}
         </button>
         <button 
           mat-button 
@@ -181,23 +181,24 @@
     </mat-card>
   </div>
 
-  <!-- Sidebar with saved sessions -->
-  <div class="sidebar" *ngIf="sessions().length > 0">
-    <mat-card class="sessions-card">
+  <!-- Sidebar with saved lists -->
+  <div class="sidebar">
+    <mat-card class="lists-card">
       <mat-card-header>
-        <mat-card-title>Saved Sessions</mat-card-title>
+        <mat-card-title>Saved Lists</mat-card-title>
+        <mat-card-subtitle *ngIf="lists().length > 0">{{ lists().length }} saved list{{ lists().length !== 1 ? 's' : '' }}</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
-        <mat-list>
-          <mat-list-item *ngFor="let session of sessions()">
-            <span matListItemTitle>{{ session.listName }}</span>
-            <span matListItemLine>{{ session.items.length }} items</span>
-            <span matListItemLine class="date">{{ session.createdAt | date:'short' }}</span>
+        <mat-list *ngIf="lists().length > 0">
+          <mat-list-item *ngFor="let list of lists()">
+            <span matListItemTitle>{{ list.listName }}</span>
+            <span matListItemLine>{{ list.items.length }} items</span>
+            <span matListItemLine class="date">{{ list.createdAt | date:'short' }}</span>
             <button 
               mat-icon-button 
               matListItemMeta
-              (click)="loadSession(session)"
+              (click)="loadList(list)"
               [disabled]="sortState().isActive">
               <mat-icon>open_in_new</mat-icon>
             </button>
@@ -205,12 +206,18 @@
               mat-icon-button 
               matListItemMeta
               color="warn"
-              (click)="deleteSession(session)"
+              (click)="deleteList(list)"
               [disabled]="sortState().isActive">
               <mat-icon>delete</mat-icon>
             </button>
           </mat-list-item>
         </mat-list>
+        
+        <div class="no-lists" *ngIf="lists().length === 0">
+          <mat-icon>inbox</mat-icon>
+          <p>No saved lists yet</p>
+          <p>Complete a sort to save a list</p>
+        </div>
       </mat-card-content>
     </mat-card>
   </div>
