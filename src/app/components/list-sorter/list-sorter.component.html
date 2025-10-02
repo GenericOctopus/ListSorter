@@ -1,0 +1,195 @@
+<div class="list-sorter-container">
+  <div class="main-content">
+    <!-- Input Section -->
+    <mat-card class="input-card" *ngIf="!sortState().isActive && !showResults()">
+      <mat-card-header>
+        <mat-card-title>Create Your List</mat-card-title>
+        <mat-card-subtitle>Add items to sort based on your preferences</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>List Name</mat-label>
+          <input 
+            matInput 
+            [(ngModel)]="listName" 
+            placeholder="e.g., Favorite Movies"
+            [disabled]="sortState().isActive">
+          <mat-icon matPrefix>label</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Add Item</mat-label>
+          <input 
+            matInput 
+            [(ngModel)]="currentItem" 
+            (keypress)="onKeyPress($event)"
+            placeholder="Enter an item"
+            [disabled]="sortState().isActive">
+          <mat-icon matPrefix>add</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            (click)="addItem()"
+            [disabled]="!canAddItem()">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <div class="items-list" *ngIf="items().length > 0">
+          <h3>Items ({{ items().length }})</h3>
+          <mat-chip-set>
+            <mat-chip *ngFor="let item of items()" [removable]="true" (removed)="removeItem(item)">
+              {{ item }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          </mat-chip-set>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="startSort()"
+          [disabled]="!canStartSort()">
+          <mat-icon>sort</mat-icon>
+          Start Sorting
+        </button>
+        <button 
+          mat-button 
+          (click)="clearList()"
+          [disabled]="items().length === 0">
+          <mat-icon>clear</mat-icon>
+          Clear List
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Sorting Section -->
+    <mat-card class="sorting-card" *ngIf="sortState().isActive && sortState().currentPair">
+      <mat-card-header>
+        <mat-card-title>Which do you prefer?</mat-card-title>
+        <mat-card-subtitle>
+          Comparison {{ sortState().completedComparisons + 1 }} of ~{{ sortState().totalComparisons }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-progress-bar 
+          mode="determinate" 
+          [value]="sortState().progress"
+          class="progress-bar">
+        </mat-progress-bar>
+
+        <div class="comparison-container">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            class="comparison-button"
+            (click)="selectOption('A')">
+            <div class="comparison-content">
+              <mat-icon>thumb_up</mat-icon>
+              <span>{{ sortState().currentPair?.itemA }}</span>
+            </div>
+          </button>
+
+          <div class="or-divider">
+            <mat-divider></mat-divider>
+            <span>OR</span>
+            <mat-divider></mat-divider>
+          </div>
+
+          <button 
+            mat-raised-button 
+            color="primary" 
+            class="comparison-button"
+            (click)="selectOption('B')">
+            <div class="comparison-content">
+              <mat-icon>thumb_up</mat-icon>
+              <span>{{ sortState().currentPair?.itemB }}</span>
+            </div>
+          </button>
+        </div>
+
+        <button 
+          mat-stroked-button 
+          class="equal-button"
+          (click)="selectOption('Equal')">
+          <mat-icon>balance</mat-icon>
+          They're Equal
+        </button>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button mat-button color="warn" (click)="cancelSort()">
+          <mat-icon>cancel</mat-icon>
+          Cancel Sort
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Results Section -->
+    <mat-card class="results-card" *ngIf="showResults()">
+      <mat-card-header>
+        <mat-card-title>{{ listName() }} - Sorted Results</mat-card-title>
+        <mat-card-subtitle>Your personalized ranking</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-list>
+          <mat-list-item *ngFor="let item of sortedItems(); let i = index">
+            <span matListItemTitle class="rank-number">{{ i + 1 }}</span>
+            <span matListItemLine>{{ item }}</span>
+            <mat-icon matListItemIcon [class]="'rank-icon rank-' + (i + 1)">
+              {{ i === 0 ? 'emoji_events' : i === 1 ? 'workspace_premium' : i === 2 ? 'military_tech' : 'star' }}
+            </mat-icon>
+          </mat-list-item>
+        </mat-list>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button mat-raised-button color="primary" (click)="clearList()">
+          <mat-icon>add</mat-icon>
+          Create New List
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Sidebar with saved sessions -->
+  <div class="sidebar" *ngIf="sessions().length > 0">
+    <mat-card class="sessions-card">
+      <mat-card-header>
+        <mat-card-title>Saved Sessions</mat-card-title>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <mat-list>
+          <mat-list-item *ngFor="let session of sessions()">
+            <span matListItemTitle>{{ session.listName }}</span>
+            <span matListItemLine>{{ session.items.length }} items</span>
+            <span matListItemLine class="date">{{ session.createdAt | date:'short' }}</span>
+            <button 
+              mat-icon-button 
+              matListItemMeta
+              (click)="loadSession(session)"
+              [disabled]="sortState().isActive">
+              <mat-icon>open_in_new</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              matListItemMeta
+              color="warn"
+              (click)="deleteSession(session)"
+              [disabled]="sortState().isActive">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-list-item>
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
