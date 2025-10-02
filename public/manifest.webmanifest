@@ -1,9 +1,12 @@
 {
-  "name": "ListSorter",
+  "name": "List Sorter - Tier List Creator",
   "short_name": "ListSorter",
+  "description": "Create and sort personalized tier lists using merge sort comparisons",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
+  "theme_color": "#667eea",
+  "background_color": "#667eea",
   "icons": [
     {
       "src": "icons/icon-72x72.png",
