@@ -36,6 +36,7 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "/ListSorter/",
               "budgets": [
                 {
                   "type": "initial",
