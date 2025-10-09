@@ -38,6 +38,7 @@ export class ListSorterComponent {
   // Input state
   protected listName = signal('');
   protected currentItem = signal('');
+  protected pastedText = signal('');
   protected items = signal<string[]>([]);
   
   // Sort state
@@ -238,29 +239,32 @@ export class ListSorterComponent {
     reader.readAsText(file);
   }
 
+  addPastedItems(): void {
+    const content = this.pastedText().trim();
+    if (!content) {
+      return;
+    }
+
+    const newItems = this.parseTextContent(content);
+    const currentItems = this.items();
+    const uniqueNewItems = newItems.filter(item => !currentItems.includes(item));
+    
+    if (uniqueNewItems.length > 0) {
+      this.items.update(items => [...items, ...uniqueNewItems]);
+      this.snackBar.open(
+        `Added ${uniqueNewItems.length} item${uniqueNewItems.length !== 1 ? 's' : ''} from pasted text`,
+        'Close',
+        { duration: 3000 }
+      );
+      this.pastedText.set(''); // Clear the textarea after adding
+    } else {
+      this.snackBar.open('No new items found in pasted text', 'Close', { duration: 3000 });
+    }
+  }
+
   private parseFileContent(content: string, filename: string): void {
     const isCsv = filename.toLowerCase().endsWith('.csv');
-    let newItems: string[] = [];
-
-    if (isCsv) {
-      // Parse CSV - handle both comma and semicolon separators
-      const lines = content.split(/\r?\n/);
-      
-      for (const line of lines) {
-        // Try comma first, then semicolon
-        const items = line.includes(',') 
-          ? line.split(',') 
-          : line.split(';');
-        
-        newItems.push(...items.map(item => item.trim()).filter(item => item.length > 0));
-      }
-    } else {
-      // Parse TXT - one item per line
-      newItems = content
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-    }
+    const newItems = isCsv ? this.parseCsvContent(content) : this.parseTextContent(content);
 
     // Add unique items to the list
     const currentItems = this.items();
@@ -276,6 +280,34 @@ export class ListSorterComponent {
     } else {
       this.snackBar.open('No new items found in file', 'Close', { duration: 3000 });
     }
+  }
+
+  private parseCsvContent(content: string): string[] {
+    const newItems: string[] = [];
+    const lines = content.split(/\r?\n/);
+    
+    for (const line of lines) {
+      // Try comma first, then semicolon
+      const items = line.includes(',') 
+        ? line.split(',') 
+        : line.split(';');
+      
+      newItems.push(...items.map(item => item.trim()).filter(item => item.length > 0));
+    }
+    
+    return newItems;
+  }
+
+  private parseTextContent(content: string): string[] {
+    // First try to split by newlines
+    let items = content.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+    
+    // If we only got one item, try splitting by commas
+    if (items.length === 1 && items[0].includes(',')) {
+      items = items[0].split(',').map(item => item.trim()).filter(item => item.length > 0);
+    }
+    
+    return items;
   }
 
   private calculateTiers(sortedItems: string[]): TierGroup[] {

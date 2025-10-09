@@ -53,6 +53,26 @@ mat-card {
     }
   }
 
+  .paste-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(103, 126, 234, 0.05);
+    border-radius: 8px;
+    border: 2px dashed rgba(103, 126, 234, 0.3);
+
+    mat-form-field {
+      margin-bottom: 1rem;
+    }
+
+    button {
+      width: 100%;
+      
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
   .items-list {
     margin-top: 1.5rem;
 

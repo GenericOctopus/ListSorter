@@ -52,6 +52,27 @@
           </button>
         </div>
 
+        <div class="paste-section">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Or Paste Your List</mat-label>
+            <textarea 
+              matInput 
+              [(ngModel)]="pastedText"
+              placeholder="Paste items here (one per line or comma-separated)"
+              rows="5"
+              [disabled]="sortState().isActive">
+            </textarea>
+            <mat-icon matPrefix>content_paste</mat-icon>
+          </mat-form-field>
+          <button 
+            mat-stroked-button 
+            (click)="addPastedItems()"
+            [disabled]="!pastedText() || pastedText().trim().length === 0 || sortState().isActive">
+            <mat-icon>add_box</mat-icon>
+            Add Pasted Items
+          </button>
+        </div>
+
         <div class="items-list" *ngIf="items().length > 0">
           <h3>Items ({{ items().length }})</h3>
           <mat-chip-set>
