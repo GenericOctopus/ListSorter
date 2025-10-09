@@ -198,20 +198,33 @@
               <div class="tier-slider" *ngFor="let tierName of tierNames; let i = index">
                 <label class="slider-label" [attr.data-tier]="tierName">
                   <span class="tier-badge">{{ tierName }}</span>
-                  <span class="tier-value">{{ getTierPercentage(i) }}%</span>
                 </label>
-                <mat-slider 
-                  min="0" 
-                  max="100" 
-                  step="1" 
-                  showTickMarks
-                  discrete
-                  [displayWith]="formatLabel">
-                  <input 
-                    matSliderThumb 
-                    [ngModel]="getTierPercentage(i)"
-                    (ngModelChange)="updateTierPercentage(i, $event)">
-                </mat-slider>
+                <div class="slider-input-container" [attr.data-tier]="tierName">
+                  <mat-slider 
+                    min="0" 
+                    max="100" 
+                    step="1" 
+                    showTickMarks
+                    discrete
+                    [displayWith]="formatLabel"
+                    class="tier-slider-control">
+                    <input 
+                      matSliderThumb 
+                      [ngModel]="getTierPercentage(i)"
+                      (ngModelChange)="updateTierPercentage(i, $event)">
+                  </mat-slider>
+                  <mat-form-field appearance="outline" class="percentage-input">
+                    <input 
+                      matInput 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      [ngModel]="getTierPercentage(i)"
+                      (ngModelChange)="updateTierPercentage(i, $event)"
+                      (blur)="validateTierPercentage(i)">
+                    <span matTextSuffix>%</span>
+                  </mat-form-field>
+                </div>
               </div>
             </div>
             

@@ -390,6 +390,22 @@ export class ListSorterComponent {
     this.tierPercentages.set(percentages);
   }
   
+  // Validate tier percentage input (clamp between 0-100)
+  validateTierPercentage(index: number): void {
+    const percentages = [...this.tierPercentages()];
+    let value = percentages[index];
+    
+    // Clamp value between 0 and 100
+    if (value < 0) {
+      value = 0;
+    } else if (value > 100) {
+      value = 100;
+    }
+    
+    percentages[index] = value;
+    this.tierPercentages.set(percentages);
+  }
+  
   // Get a specific tier percentage (for binding)
   getTierPercentage(index: number): number {
     return this.tierPercentages()[index];
