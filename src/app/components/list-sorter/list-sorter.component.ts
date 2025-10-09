@@ -11,6 +11,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSliderModule } from '@angular/material/slider';
 
 import { DatabaseService, SortedList, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
@@ -29,7 +32,10 @@ import { MergeSortService, SortState } from '../../services/merge-sort.service';
     MatProgressBarModule,
     MatListModule,
     MatDividerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    DragDropModule,
+    MatExpansionModule,
+    MatSliderModule
   ],
   templateUrl: './list-sorter.component.html',
   styleUrl: './list-sorter.component.scss'
@@ -53,6 +59,11 @@ export class ListSorterComponent {
   protected sortedItems = signal<string[]>([]);
   protected tieredItems = signal<TierGroup[]>([]);
   protected showResults = signal(false);
+  protected showAdvancedSettings = signal(false);
+  
+  // Tier percentages (default values)
+  protected tierPercentages = signal<number[]>([10, 20, 30, 25, 10, 5]);
+  protected tierNames = ['S', 'A', 'B', 'C', 'D', 'F'];
   
   // Lists
   protected lists = signal<SortedList[]>([]);
@@ -313,23 +324,19 @@ export class ListSorterComponent {
   private calculateTiers(sortedItems: string[]): TierGroup[] {
     if (sortedItems.length === 0) return [];
     
-    const tierNames = ['S', 'A', 'B', 'C', 'D', 'F'];
     const itemCount = sortedItems.length;
-    
-    // Calculate tier sizes based on item count
-    // S tier: top ~10%, A: next ~20%, B: next ~30%, C: next ~25%, D: next ~10%, F: bottom ~5%
-    const tierPercentages = [0.10, 0.20, 0.30, 0.25, 0.10, 0.05];
+    const percentages = this.tierPercentages();
     
     const tiers: TierGroup[] = [];
     let currentIndex = 0;
     
-    for (let i = 0; i < tierNames.length && currentIndex < itemCount; i++) {
-      const tierSize = Math.max(1, Math.round(itemCount * tierPercentages[i]));
+    for (let i = 0; i < this.tierNames.length && currentIndex < itemCount; i++) {
+      const tierSize = Math.max(1, Math.round(itemCount * percentages[i] / 100));
       const endIndex = Math.min(currentIndex + tierSize, itemCount);
       
       if (currentIndex < itemCount) {
         tiers.push({
-          tier: tierNames[i],
+          tier: this.tierNames[i],
           items: sortedItems.slice(currentIndex, endIndex)
         });
         currentIndex = endIndex;
@@ -345,5 +352,102 @@ export class ListSorterComponent {
     }
     
     return tiers;
+  }
+  
+  // Get connected drop lists for drag and drop
+  getConnectedLists(currentIndex: number): string[] {
+    return this.tieredItems()
+      .map((_, index) => `tier-${index}`)
+      .filter((_, index) => index !== currentIndex);
+  }
+  
+  // Drag and drop handler
+  onItemDrop(event: CdkDragDrop<string[]>): void {
+    if (event.previousContainer === event.container) {
+      // Reorder within the same tier
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      // Move between tiers
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
+    }
+    
+    // Update the tiered items signal
+    this.tieredItems.update(tiers => [...tiers]);
+    
+    // Save the updated list to database
+    this.saveCurrentList();
+  }
+  
+  // Update a specific tier percentage
+  updateTierPercentage(index: number, value: number): void {
+    const percentages = [...this.tierPercentages()];
+    percentages[index] = value;
+    this.tierPercentages.set(percentages);
+  }
+  
+  // Get a specific tier percentage (for binding)
+  getTierPercentage(index: number): number {
+    return this.tierPercentages()[index];
+  }
+  
+  // Recalculate tiers with new percentages
+  recalculateTiers(): void {
+    const allItems = this.tieredItems().flatMap(tier => tier.items);
+    const newTiers = this.calculateTiers(allItems);
+    this.tieredItems.set(newTiers);
+    this.saveCurrentList();
+    this.snackBar.open('Tiers recalculated with new percentages', 'Close', { duration: 3000 });
+  }
+  
+  // Reset tier percentages to defaults
+  resetTierPercentages(): void {
+    this.tierPercentages.set([10, 20, 30, 25, 10, 5]);
+    this.snackBar.open('Tier percentages reset to defaults', 'Close', { duration: 2000 });
+  }
+  
+  // Format slider label
+  formatLabel(value: number): string {
+    return `${value}%`;
+  }
+  
+  // Get total percentage
+  getTotalPercentage(): number {
+    return this.tierPercentages().reduce((sum, val) => sum + val, 0);
+  }
+  
+  // Save current list to database
+  private async saveCurrentList(): Promise<void> {
+    if (!this.currentListId() || !this.showResults()) {
+      return;
+    }
+    
+    try {
+      const list: SortedList = {
+        _id: this.currentListId(),
+        listName: this.listName(),
+        items: this.items(),
+        sortedItems: this.tieredItems().flatMap(tier => tier.items),
+        tieredItems: this.tieredItems(),
+        completed: true,
+        createdAt: new Date(),
+        completedAt: new Date()
+      };
+      
+      const existing = await this.databaseService.getSortedList(this.currentListId()!);
+      if (existing && existing._rev) {
+        list._rev = existing._rev;
+        list.createdAt = existing.createdAt;
+      }
+      
+      await this.databaseService.saveSortedList(list);
+      await this.loadLists();
+    } catch (error) {
+      console.error('Error saving list:', error);
+    }
   }
 }
