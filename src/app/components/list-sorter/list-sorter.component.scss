@@ -4,12 +4,13 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: calc(100vh - 4rem);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
   @media (max-width: 968px) {
     flex-direction: column;
     padding: 1rem;
+    min-height: calc(100vh - 2rem);
   }
 }
 
