@@ -5,26 +5,8 @@
   max-width: 1400px;
   margin: 0 auto;
   min-height: calc(100vh - 4rem);
-  background: linear-gradient(135deg, 
-    #ff6b6b 0%, 
-    #ee5a6f 10%, 
-    #feca57 20%, 
-    #f39c12 30%, 
-    #48dbfb 40%, 
-    #0abde3 50%, 
-    #1dd1a1 60%, 
-    #10ac84 70%, 
-    #a29bfe 80%, 
-    #6c5ce7 90%, 
-    #636e72 95%, 
-    #2d3436 100%
-  );
-
-  @media (max-width: 968px) {
-    flex-direction: column;
-    padding: 1rem;
-    min-height: calc(100vh - 2rem);
-  }
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f 10%, #feca57 20%, #f39c12 30%, #48dbfb 40%, #0abde3 50%, #1dd1a1 60%, #10ac84 70%, #a29bfe 80%, #6c5ce7 90%, #636e72 95%, #2d3436);
+  @media (max-width: 968px) { flex-direction: column; padding: 1rem; min-height: calc(100vh - 2rem); }
 }
 
 .main-content {
@@ -52,40 +34,16 @@ mat-card {
 }
 
 .input-card {
-  .file-upload-section {
+  .file-upload-section, .paste-section {
     margin-top: 1rem;
     padding: 1rem;
     background-color: rgba(103, 126, 234, 0.05);
     border-radius: 8px;
     border: 2px dashed rgba(103, 126, 234, 0.3);
-    text-align: center;
-
-    button {
-      mat-icon {
-        margin-right: 0.5rem;
-      }
-    }
   }
-
-  .paste-section {
-    margin-top: 1rem;
-    padding: 1rem;
-    background-color: rgba(103, 126, 234, 0.05);
-    border-radius: 8px;
-    border: 2px dashed rgba(103, 126, 234, 0.3);
-
-    mat-form-field {
-      margin-bottom: 1rem;
-    }
-
-    button {
-      width: 100%;
-      
-      mat-icon {
-        margin-right: 0.5rem;
-      }
-    }
-  }
+  .file-upload-section { text-align: center; }
+  .paste-section mat-form-field { margin-bottom: 1rem; }
+  .paste-section button { width: 100%; }
 
   .items-list {
     margin-top: 1.5rem;
@@ -254,29 +212,12 @@ mat-card {
           color: #667eea;
         }
 
-        &[data-tier="S"] .tier-badge {
-          background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-        }
-        
-        &[data-tier="A"] .tier-badge {
-          background: linear-gradient(135deg, #feca57 0%, #f39c12 100%);
-        }
-        
-        &[data-tier="B"] .tier-badge {
-          background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
-        }
-        
-        &[data-tier="C"] .tier-badge {
-          background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);
-        }
-        
-        &[data-tier="D"] .tier-badge {
-          background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-        }
-        
-        &[data-tier="F"] .tier-badge {
-          background: linear-gradient(135deg, #636e72 0%, #2d3436 100%);
-        }
+        &[data-tier="S"] .tier-badge { background: linear-gradient(135deg, #ff6b6b, #ee5a6f); }
+        &[data-tier="A"] .tier-badge { background: linear-gradient(135deg, #feca57, #f39c12); }
+        &[data-tier="B"] .tier-badge { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+        &[data-tier="C"] .tier-badge { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
+        &[data-tier="D"] .tier-badge { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+        &[data-tier="F"] .tier-badge { background: linear-gradient(135deg, #636e72, #2d3436); }
       }
 
       .slider-input-container {
@@ -315,44 +256,16 @@ mat-card {
           }
         }
 
-        // Color the input field based on tier
-        &[data-tier="S"] .percentage-input ::ng-deep input {
-          color: #ee5a6f;
-        }
-        
-        &[data-tier="A"] .percentage-input ::ng-deep input {
-          color: #f39c12;
-        }
-        
-        &[data-tier="B"] .percentage-input ::ng-deep input {
-          color: #0abde3;
-        }
-        
-        &[data-tier="C"] .percentage-input ::ng-deep input {
-          color: #10ac84;
-        }
-        
-        &[data-tier="D"] .percentage-input ::ng-deep input {
-          color: #6c5ce7;
-        }
-        
-        &[data-tier="F"] .percentage-input ::ng-deep input {
-          color: #2d3436;
-        }
+        &[data-tier="S"] .percentage-input ::ng-deep input { color: #ee5a6f; }
+        &[data-tier="A"] .percentage-input ::ng-deep input { color: #f39c12; }
+        &[data-tier="B"] .percentage-input ::ng-deep input { color: #0abde3; }
+        &[data-tier="C"] .percentage-input ::ng-deep input { color: #10ac84; }
+        &[data-tier="D"] .percentage-input ::ng-deep input { color: #6c5ce7; }
+        &[data-tier="F"] .percentage-input ::ng-deep input { color: #2d3436; }
       }
     }
 
-    .settings-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-
-      button {
-        mat-icon {
-          margin-right: 0.5rem;
-        }
-      }
-    }
+    .settings-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
   }
 
   .tier-container {
@@ -375,29 +288,12 @@ mat-card {
     font-size: 1.1rem;
     color: white;
     
-    &[data-tier="S"] {
-      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-    }
-    
-    &[data-tier="A"] {
-      background: linear-gradient(135deg, #feca57 0%, #f39c12 100%);
-    }
-    
-    &[data-tier="B"] {
-      background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
-    }
-    
-    &[data-tier="C"] {
-      background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);
-    }
-    
-    &[data-tier="D"] {
-      background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-    }
-    
-    &[data-tier="F"] {
-      background: linear-gradient(135deg, #636e72 0%, #2d3436 100%);
-    }
+    &[data-tier="S"] { background: linear-gradient(135deg, #ff6b6b, #ee5a6f); }
+    &[data-tier="A"] { background: linear-gradient(135deg, #feca57, #f39c12); }
+    &[data-tier="B"] { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+    &[data-tier="C"] { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
+    &[data-tier="D"] { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+    &[data-tier="F"] { background: linear-gradient(135deg, #636e72, #2d3436); }
 
     .tier-label {
       font-size: 1.5rem;
@@ -535,26 +431,7 @@ mat-card {
   }
 }
 
-mat-card-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding: 1rem;
-  flex-wrap: wrap;
-
-  button {
-    mat-icon {
-      margin-right: 0.5rem;
-    }
-  }
-}
-
-mat-card-header {
-  mat-card-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  mat-card-subtitle {
-    margin-top: 0.5rem;
-  }
-}
+mat-card-actions { display: flex; gap: 0.5rem; padding: 1rem; flex-wrap: wrap; }
+mat-card-header mat-card-title { font-size: 1.5rem; font-weight: 600; }
+mat-card-header mat-card-subtitle { margin-top: 0.5rem; }
+button mat-icon { margin-right: 0.5rem; }
