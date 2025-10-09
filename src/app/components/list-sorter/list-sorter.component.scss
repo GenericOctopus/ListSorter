@@ -5,7 +5,20 @@
   max-width: 1400px;
   margin: 0 auto;
   min-height: calc(100vh - 4rem);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, 
+    #ff6b6b 0%, 
+    #ee5a6f 10%, 
+    #feca57 20%, 
+    #f39c12 30%, 
+    #48dbfb 40%, 
+    #0abde3 50%, 
+    #1dd1a1 60%, 
+    #10ac84 70%, 
+    #a29bfe 80%, 
+    #6c5ce7 90%, 
+    #636e72 95%, 
+    #2d3436 100%
+  );
 
   @media (max-width: 968px) {
     flex-direction: column;
@@ -246,7 +259,7 @@ mat-card {
         }
         
         &[data-tier="A"] .tier-badge {
-          background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+          background: linear-gradient(135deg, #feca57 0%, #f39c12 100%);
         }
         
         &[data-tier="B"] .tier-badge {
@@ -309,7 +322,7 @@ mat-card {
     }
     
     &[data-tier="A"] {
-      background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+      background: linear-gradient(135deg, #feca57 0%, #f39c12 100%);
     }
     
     &[data-tier="B"] {
