@@ -1,41 +1,25 @@
 import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatListModule } from '@angular/material/list';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatSliderModule } from '@angular/material/slider';
+import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
 import { DatabaseService, SortedList, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
+import { ListInputComponent } from './list-input/list-input.component';
+import { SortingComparisonComponent } from './sorting-comparison/sorting-comparison.component';
+import { TierResultsComponent } from './tier-results/tier-results.component';
+import { SavedListsSidebarComponent } from './saved-lists-sidebar/saved-lists-sidebar.component';
 
 @Component({
   selector: 'app-list-sorter',
+  standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatChipsModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatListModule,
-    MatDividerModule,
     MatSnackBarModule,
-    DragDropModule,
-    MatExpansionModule,
-    MatSliderModule
+    ListInputComponent,
+    SortingComparisonComponent,
+    TierResultsComponent,
+    SavedListsSidebarComponent
   ],
   templateUrl: './list-sorter.component.html',
   styleUrl: './list-sorter.component.scss'
@@ -221,26 +205,12 @@ export class ListSorterComponent {
     ));
   }
 
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.addItem();
-    }
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) {
-      return;
-    }
-
-    const file = input.files[0];
+  onFileSelected(file: File): void {
     const reader = new FileReader();
 
     reader.onload = (e) => {
       const content = e.target?.result as string;
       this.parseFileContent(content, file.name);
-      // Reset the input so the same file can be selected again
-      input.value = '';
     };
 
     reader.onerror = () => {
@@ -354,13 +324,6 @@ export class ListSorterComponent {
     return tiers;
   }
   
-  // Get connected drop lists for drag and drop
-  getConnectedLists(currentIndex: number): string[] {
-    return this.tieredItems()
-      .map((_, index) => `tier-${index}`)
-      .filter((_, index) => index !== currentIndex);
-  }
-  
   // Drag and drop handler
   onItemDrop(event: CdkDragDrop<string[]>): void {
     if (event.previousContainer === event.container) {
@@ -406,11 +369,6 @@ export class ListSorterComponent {
     this.tierPercentages.set(percentages);
   }
   
-  // Get a specific tier percentage (for binding)
-  getTierPercentage(index: number): number {
-    return this.tierPercentages()[index];
-  }
-  
   // Recalculate tiers with new percentages
   recalculateTiers(): void {
     const allItems = this.tieredItems().flatMap(tier => tier.items);
@@ -424,16 +382,6 @@ export class ListSorterComponent {
   resetTierPercentages(): void {
     this.tierPercentages.set([10, 20, 30, 25, 10, 5]);
     this.snackBar.open('Tier percentages reset to defaults', 'Close', { duration: 2000 });
-  }
-  
-  // Format slider label
-  formatLabel(value: number): string {
-    return `${value}%`;
-  }
-  
-  // Get total percentage
-  getTotalPercentage(): number {
-    return this.tierPercentages().reduce((sum, val) => sum + val, 0);
   }
   
   // Save current list to database

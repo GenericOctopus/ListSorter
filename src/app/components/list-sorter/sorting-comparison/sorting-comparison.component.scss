@@ -1,0 +1,71 @@
+.sorting-card {
+  .progress-bar {
+    margin-bottom: 2rem;
+    height: 8px;
+    border-radius: 4px;
+  }
+
+  .comparison-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .comparison-button {
+    width: 100%;
+    min-height: 80px;
+    font-size: 1.1rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .comparison-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      span {
+        font-weight: 500;
+      }
+    }
+  }
+
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+
+    span {
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.54);
+      white-space: nowrap;
+    }
+
+    mat-divider {
+      flex: 1;
+    }
+  }
+
+  .equal-button {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem;
+
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}

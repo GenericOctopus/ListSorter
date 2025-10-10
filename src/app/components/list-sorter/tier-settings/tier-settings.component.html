@@ -1,0 +1,63 @@
+<mat-expansion-panel class="settings-panel" [expanded]="showAdvancedSettings()" (expandedChange)="onShowAdvancedSettingsChange($event)">
+  <mat-expansion-panel-header>
+    <mat-panel-title>
+      <mat-icon>settings</mat-icon>
+      Advanced Settings
+    </mat-panel-title>
+    <mat-panel-description>
+      Adjust tier percentages
+    </mat-panel-description>
+  </mat-expansion-panel-header>
+  
+  <div class="settings-content">
+    <p class="settings-info">
+      <mat-icon>info</mat-icon>
+      Customize the percentage of items in each tier. Total: {{ getTotalPercentage() }}%
+    </p>
+    
+    <div class="tier-sliders">
+      <div class="tier-slider" *ngFor="let tierName of tierNames(); let i = index">
+        <label class="slider-label" [attr.data-tier]="tierName">
+          <span class="tier-badge">{{ tierName }}</span>
+        </label>
+        <div class="slider-input-container" [attr.data-tier]="tierName">
+          <mat-slider 
+            min="0" 
+            max="100" 
+            step="1" 
+            showTickMarks
+            discrete
+            [displayWith]="formatLabel"
+            class="tier-slider-control">
+            <input 
+              matSliderThumb 
+              [ngModel]="getTierPercentage(i)"
+              (ngModelChange)="onUpdateTierPercentage(i, $event)">
+          </mat-slider>
+          <mat-form-field appearance="outline" class="percentage-input">
+            <input 
+              matInput 
+              type="number" 
+              min="0" 
+              max="100" 
+              [ngModel]="getTierPercentage(i)"
+              (ngModelChange)="onUpdateTierPercentage(i, $event)"
+              (blur)="onValidateTierPercentage(i)">
+            <span matTextSuffix>%</span>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-actions">
+      <button mat-raised-button color="primary" (click)="onRecalculateTiers()">
+        <mat-icon>refresh</mat-icon>
+        Apply & Recalculate
+      </button>
+      <button mat-stroked-button (click)="onResetTierPercentages()">
+        <mat-icon>restore</mat-icon>
+        Reset to Defaults
+      </button>
+    </div>
+  </div>
+</mat-expansion-panel>

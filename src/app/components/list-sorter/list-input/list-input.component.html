@@ -1,0 +1,106 @@
+<mat-card class="input-card">
+  <mat-card-header>
+    <mat-card-title>{{ currentListId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
+    <mat-card-subtitle>{{ currentListId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>List Name</mat-label>
+      <input 
+        matInput 
+        [ngModel]="listName()"
+        (ngModelChange)="onListNameChange($event)"
+        placeholder="e.g., Favorite Movies"
+        [disabled]="isDisabled()">
+      <mat-icon matPrefix>label</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Add Item</mat-label>
+      <input 
+        matInput 
+        [ngModel]="currentItem()"
+        (ngModelChange)="onCurrentItemChange($event)"
+        (keypress)="onKeyPress($event)"
+        placeholder="Enter an item"
+        [disabled]="isDisabled()">
+      <mat-icon matPrefix>add</mat-icon>
+      <button 
+        mat-icon-button 
+        matSuffix 
+        (click)="onAddItem()"
+        [disabled]="!canAddItem()">
+        <mat-icon>add_circle</mat-icon>
+      </button>
+    </mat-form-field>
+
+    <div class="file-upload-section">
+      <input 
+        #fileInput 
+        type="file" 
+        accept=".txt,.csv" 
+        (change)="onFileSelected($event)"
+        style="display: none">
+      <button 
+        mat-stroked-button 
+        (click)="fileInput.click()"
+        [disabled]="isDisabled()">
+        <mat-icon>upload_file</mat-icon>
+        Import from File (TXT/CSV)
+      </button>
+    </div>
+
+    <div class="paste-section">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Or Paste Your List</mat-label>
+        <textarea 
+          matInput 
+          [ngModel]="pastedText()"
+          (ngModelChange)="onPastedTextChange($event)"
+          placeholder="Paste items here (one per line or comma-separated)"
+          rows="5"
+          [disabled]="isDisabled()">
+        </textarea>
+        <mat-icon matPrefix>content_paste</mat-icon>
+      </mat-form-field>
+      <button 
+        mat-stroked-button 
+        (click)="onAddPastedItems()"
+        [disabled]="!pastedText() || pastedText().trim().length === 0 || isDisabled()">
+        <mat-icon>add_box</mat-icon>
+        Add Pasted Items
+      </button>
+    </div>
+
+    <div class="items-list" *ngIf="items().length > 0">
+      <h3>Items ({{ items().length }})</h3>
+      <mat-chip-set>
+        <mat-chip *ngFor="let item of items()" [removable]="true" (removed)="onRemoveItem(item)">
+          {{ item }}
+          <button matChipRemove>
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </mat-chip>
+      </mat-chip-set>
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button 
+      mat-raised-button 
+      color="primary" 
+      (click)="onStartSort()"
+      [disabled]="!canStartSort()">
+      <mat-icon>sort</mat-icon>
+      {{ currentListId() ? 'Re-Sort List' : 'Start Sorting' }}
+    </button>
+    <button 
+      mat-button 
+      (click)="onClearList()"
+      [disabled]="items().length === 0">
+      <mat-icon>clear</mat-icon>
+      Clear List
+    </button>
+  </mat-card-actions>
+</mat-card>

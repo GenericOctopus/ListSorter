@@ -1,0 +1,55 @@
+<mat-card class="results-card">
+  <mat-card-header>
+    <mat-card-title>{{ listName() }} - Tier List</mat-card-title>
+    <mat-card-subtitle>Your personalized ranking organized by tiers (drag items to reorder)</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Advanced Settings Panel -->
+    <app-tier-settings
+      [tierPercentages]="tierPercentages()"
+      [tierNames]="tierNames()"
+      [showAdvancedSettings]="showAdvancedSettings()"
+      (showAdvancedSettingsChange)="onShowAdvancedSettingsChange($event)"
+      (updateTierPercentage)="onUpdateTierPercentage($event)"
+      (validateTierPercentage)="onValidateTierPercentage($event)"
+      (recalculateTiers)="onRecalculateTiers()"
+      (resetTierPercentages)="onResetTierPercentages()">
+    </app-tier-settings>
+
+    <!-- Tier List with Drag & Drop -->
+    <div class="tier-container" *ngFor="let tierGroup of tieredItems(); let tierIndex = index">
+      <div class="tier-header" [attr.data-tier]="tierGroup.tier">
+        <span class="tier-label">{{ tierGroup.tier }}</span>
+        <span class="tier-count">{{ tierGroup.items.length }} item{{ tierGroup.items.length !== 1 ? 's' : '' }}</span>
+      </div>
+      <div 
+        class="tier-items"
+        cdkDropList
+        [id]="'tier-' + tierIndex"
+        [cdkDropListData]="tierGroup.items"
+        [cdkDropListConnectedTo]="getConnectedLists(tierIndex)"
+        (cdkDropListDropped)="onItemDrop($event)">
+        <div 
+          class="tier-item" 
+          *ngFor="let item of tierGroup.items"
+          cdkDrag>
+          <mat-icon class="drag-handle" cdkDragHandle>drag_indicator</mat-icon>
+          <span class="item-text">{{ item }}</span>
+          <div class="drag-placeholder" *cdkDragPlaceholder></div>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button mat-raised-button color="accent" (click)="onHideResults()">
+      <mat-icon>edit</mat-icon>
+      Add More Items
+    </button>
+    <button mat-raised-button color="primary" (click)="onCreateNewList()">
+      <mat-icon>add</mat-icon>
+      Create New List
+    </button>
+  </mat-card-actions>
+</mat-card>

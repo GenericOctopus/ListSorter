@@ -1,0 +1,115 @@
+.results-card {
+  .tier-container {
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .tier-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+    
+    &[data-tier="S"] { background: linear-gradient(135deg, #ff6b6b, #ee5a6f); }
+    &[data-tier="A"] { background: linear-gradient(135deg, #feca57, #f39c12); }
+    &[data-tier="B"] { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+    &[data-tier="C"] { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
+    &[data-tier="D"] { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+    &[data-tier="F"] { background: linear-gradient(135deg, #636e72, #2d3436); }
+
+    .tier-label {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .tier-count {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+  }
+
+  .tier-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: rgba(0, 0, 0, 0.02);
+    min-height: 60px;
+    transition: background-color 0.2s ease;
+
+    &.cdk-drop-list-dragging {
+      background-color: rgba(103, 126, 234, 0.1);
+    }
+  }
+
+  .tier-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: move;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      border-color: #667eea;
+    }
+
+    &.cdk-drag-preview {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      border-color: #667eea;
+      opacity: 0.9;
+      cursor: grabbing;
+    }
+
+    &.cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .drag-handle {
+      cursor: grab;
+      color: rgba(0, 0, 0, 0.4);
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #667eea;
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+    }
+
+    .item-text {
+      flex: 1;
+    }
+
+    .drag-placeholder {
+      background: rgba(103, 126, 234, 0.2);
+      border: 2px dashed #667eea;
+      border-radius: 6px;
+      min-height: 40px;
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+}

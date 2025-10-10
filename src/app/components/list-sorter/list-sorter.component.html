@@ -1,322 +1,61 @@
 <div class="list-sorter-container">
   <div class="main-content">
     <!-- Input Section -->
-    <mat-card class="input-card" *ngIf="!sortState().isActive && !showResults()">
-      <mat-card-header>
-        <mat-card-title>{{ currentListId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
-        <mat-card-subtitle>{{ currentListId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
-      </mat-card-header>
-      
-      <mat-card-content>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>List Name</mat-label>
-          <input 
-            matInput 
-            [(ngModel)]="listName" 
-            placeholder="e.g., Favorite Movies"
-            [disabled]="sortState().isActive">
-          <mat-icon matPrefix>label</mat-icon>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Add Item</mat-label>
-          <input 
-            matInput 
-            [(ngModel)]="currentItem" 
-            (keypress)="onKeyPress($event)"
-            placeholder="Enter an item"
-            [disabled]="sortState().isActive">
-          <mat-icon matPrefix>add</mat-icon>
-          <button 
-            mat-icon-button 
-            matSuffix 
-            (click)="addItem()"
-            [disabled]="!canAddItem()">
-            <mat-icon>add_circle</mat-icon>
-          </button>
-        </mat-form-field>
-
-        <div class="file-upload-section">
-          <input 
-            #fileInput 
-            type="file" 
-            accept=".txt,.csv" 
-            (change)="onFileSelected($event)"
-            style="display: none">
-          <button 
-            mat-stroked-button 
-            (click)="fileInput.click()"
-            [disabled]="sortState().isActive">
-            <mat-icon>upload_file</mat-icon>
-            Import from File (TXT/CSV)
-          </button>
-        </div>
-
-        <div class="paste-section">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Or Paste Your List</mat-label>
-            <textarea 
-              matInput 
-              [(ngModel)]="pastedText"
-              placeholder="Paste items here (one per line or comma-separated)"
-              rows="5"
-              [disabled]="sortState().isActive">
-            </textarea>
-            <mat-icon matPrefix>content_paste</mat-icon>
-          </mat-form-field>
-          <button 
-            mat-stroked-button 
-            (click)="addPastedItems()"
-            [disabled]="!pastedText() || pastedText().trim().length === 0 || sortState().isActive">
-            <mat-icon>add_box</mat-icon>
-            Add Pasted Items
-          </button>
-        </div>
-
-        <div class="items-list" *ngIf="items().length > 0">
-          <h3>Items ({{ items().length }})</h3>
-          <mat-chip-set>
-            <mat-chip *ngFor="let item of items()" [removable]="true" (removed)="removeItem(item)">
-              {{ item }}
-              <button matChipRemove>
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </mat-chip>
-          </mat-chip-set>
-        </div>
-      </mat-card-content>
-
-      <mat-card-actions>
-        <button 
-          mat-raised-button 
-          color="primary" 
-          (click)="startSort()"
-          [disabled]="!canStartSort()">
-          <mat-icon>sort</mat-icon>
-          {{ currentListId() ? 'Re-Sort List' : 'Start Sorting' }}
-        </button>
-        <button 
-          mat-button 
-          (click)="clearList()"
-          [disabled]="items().length === 0">
-          <mat-icon>clear</mat-icon>
-          Clear List
-        </button>
-      </mat-card-actions>
-    </mat-card>
+    <app-list-input
+      *ngIf="!sortState().isActive && !showResults()"
+      [listName]="listName()"
+      [items]="items()"
+      [currentItem]="currentItem()"
+      [pastedText]="pastedText()"
+      [isDisabled]="sortState().isActive"
+      [canAddItem]="canAddItem()"
+      [canStartSort]="canStartSort()"
+      [currentListId]="currentListId()"
+      (listNameChange)="listName.set($event)"
+      (currentItemChange)="currentItem.set($event)"
+      (pastedTextChange)="pastedText.set($event)"
+      (addItem)="addItem()"
+      (removeItem)="removeItem($event)"
+      (startSort)="startSort()"
+      (clearList)="clearList()"
+      (fileSelected)="onFileSelected($event)"
+      (addPastedItems)="addPastedItems()">
+    </app-list-input>
 
     <!-- Sorting Section -->
-    <mat-card class="sorting-card" *ngIf="sortState().isActive && sortState().currentPair">
-      <mat-card-header>
-        <mat-card-title>Which do you prefer?</mat-card-title>
-        <mat-card-subtitle>
-          Comparison {{ sortState().completedComparisons + 1 }} of ~{{ sortState().totalComparisons }}
-        </mat-card-subtitle>
-      </mat-card-header>
-
-      <mat-card-content>
-        <mat-progress-bar 
-          mode="determinate" 
-          [value]="sortState().progress"
-          class="progress-bar">
-        </mat-progress-bar>
-
-        <div class="comparison-container">
-          <button 
-            mat-raised-button 
-            color="primary" 
-            class="comparison-button"
-            (click)="selectOption('A')">
-            <div class="comparison-content">
-              <mat-icon>thumb_up</mat-icon>
-              <span>{{ sortState().currentPair?.itemA }}</span>
-            </div>
-          </button>
-
-          <div class="or-divider">
-            <mat-divider></mat-divider>
-            <span>OR</span>
-            <mat-divider></mat-divider>
-          </div>
-
-          <button 
-            mat-raised-button 
-            color="primary" 
-            class="comparison-button"
-            (click)="selectOption('B')">
-            <div class="comparison-content">
-              <mat-icon>thumb_up</mat-icon>
-              <span>{{ sortState().currentPair?.itemB }}</span>
-            </div>
-          </button>
-        </div>
-
-        <button 
-          mat-stroked-button 
-          class="equal-button"
-          (click)="selectOption('Equal')">
-          <mat-icon>balance</mat-icon>
-          They're Equal
-        </button>
-      </mat-card-content>
-
-      <mat-card-actions>
-        <button mat-button color="warn" (click)="cancelSort()">
-          <mat-icon>cancel</mat-icon>
-          Cancel Sort
-        </button>
-      </mat-card-actions>
-    </mat-card>
+    <app-sorting-comparison
+      *ngIf="sortState().isActive && sortState().currentPair"
+      [sortState]="sortState()"
+      (selectOption)="selectOption($event)"
+      (cancelSort)="cancelSort()">
+    </app-sorting-comparison>
 
     <!-- Results Section -->
-    <mat-card class="results-card" *ngIf="showResults()">
-      <mat-card-header>
-        <mat-card-title>{{ listName() }} - Tier List</mat-card-title>
-        <mat-card-subtitle>Your personalized ranking organized by tiers (drag items to reorder)</mat-card-subtitle>
-      </mat-card-header>
-
-      <mat-card-content>
-        <!-- Advanced Settings Panel -->
-        <mat-expansion-panel class="settings-panel" [(expanded)]="showAdvancedSettings">
-          <mat-expansion-panel-header>
-            <mat-panel-title>
-              <mat-icon>settings</mat-icon>
-              Advanced Settings
-            </mat-panel-title>
-            <mat-panel-description>
-              Adjust tier percentages
-            </mat-panel-description>
-          </mat-expansion-panel-header>
-          
-          <div class="settings-content">
-            <p class="settings-info">
-              <mat-icon>info</mat-icon>
-              Customize the percentage of items in each tier. Total: {{ getTotalPercentage() }}%
-            </p>
-            
-            <div class="tier-sliders">
-              <div class="tier-slider" *ngFor="let tierName of tierNames; let i = index">
-                <label class="slider-label" [attr.data-tier]="tierName">
-                  <span class="tier-badge">{{ tierName }}</span>
-                </label>
-                <div class="slider-input-container" [attr.data-tier]="tierName">
-                  <mat-slider 
-                    min="0" 
-                    max="100" 
-                    step="1" 
-                    showTickMarks
-                    discrete
-                    [displayWith]="formatLabel"
-                    class="tier-slider-control">
-                    <input 
-                      matSliderThumb 
-                      [ngModel]="getTierPercentage(i)"
-                      (ngModelChange)="updateTierPercentage(i, $event)">
-                  </mat-slider>
-                  <mat-form-field appearance="outline" class="percentage-input">
-                    <input 
-                      matInput 
-                      type="number" 
-                      min="0" 
-                      max="100" 
-                      [ngModel]="getTierPercentage(i)"
-                      (ngModelChange)="updateTierPercentage(i, $event)"
-                      (blur)="validateTierPercentage(i)">
-                    <span matTextSuffix>%</span>
-                  </mat-form-field>
-                </div>
-              </div>
-            </div>
-            
-            <div class="settings-actions">
-              <button mat-raised-button color="primary" (click)="recalculateTiers()">
-                <mat-icon>refresh</mat-icon>
-                Apply & Recalculate
-              </button>
-              <button mat-stroked-button (click)="resetTierPercentages()">
-                <mat-icon>restore</mat-icon>
-                Reset to Defaults
-              </button>
-            </div>
-          </div>
-        </mat-expansion-panel>
-
-        <!-- Tier List with Drag & Drop -->
-        <div class="tier-container" *ngFor="let tierGroup of tieredItems(); let tierIndex = index">
-          <div class="tier-header" [attr.data-tier]="tierGroup.tier">
-            <span class="tier-label">{{ tierGroup.tier }}</span>
-            <span class="tier-count">{{ tierGroup.items.length }} item{{ tierGroup.items.length !== 1 ? 's' : '' }}</span>
-          </div>
-          <div 
-            class="tier-items"
-            cdkDropList
-            [id]="'tier-' + tierIndex"
-            [cdkDropListData]="tierGroup.items"
-            [cdkDropListConnectedTo]="getConnectedLists(tierIndex)"
-            (cdkDropListDropped)="onItemDrop($event)">
-            <div 
-              class="tier-item" 
-              *ngFor="let item of tierGroup.items"
-              cdkDrag>
-              <mat-icon class="drag-handle" cdkDragHandle>drag_indicator</mat-icon>
-              <span class="item-text">{{ item }}</span>
-              <div class="drag-placeholder" *cdkDragPlaceholder></div>
-            </div>
-          </div>
-        </div>
-      </mat-card-content>
-
-      <mat-card-actions>
-        <button mat-raised-button color="accent" (click)="showResults.set(false)">
-          <mat-icon>edit</mat-icon>
-          Add More Items
-        </button>
-        <button mat-raised-button color="primary" (click)="clearList()">
-          <mat-icon>add</mat-icon>
-          Create New List
-        </button>
-      </mat-card-actions>
-    </mat-card>
+    <app-tier-results
+      *ngIf="showResults()"
+      [listName]="listName()"
+      [tieredItems]="tieredItems()"
+      [tierPercentages]="tierPercentages()"
+      [tierNames]="tierNames"
+      [showAdvancedSettings]="showAdvancedSettings()"
+      (showAdvancedSettingsChange)="showAdvancedSettings.set($event)"
+      (updateTierPercentage)="updateTierPercentage($event.index, $event.value)"
+      (validateTierPercentage)="validateTierPercentage($event)"
+      (recalculateTiers)="recalculateTiers()"
+      (resetTierPercentages)="resetTierPercentages()"
+      (itemDrop)="onItemDrop($event)"
+      (hideResults)="showResults.set(false)"
+      (createNewList)="clearList()">
+    </app-tier-results>
   </div>
 
   <!-- Sidebar with saved lists -->
   <div class="sidebar">
-    <mat-card class="lists-card">
-      <mat-card-header>
-        <mat-card-title>Saved Lists</mat-card-title>
-        <mat-card-subtitle *ngIf="lists().length > 0">{{ lists().length }} saved list{{ lists().length !== 1 ? 's' : '' }}</mat-card-subtitle>
-      </mat-card-header>
-      
-      <mat-card-content>
-        <mat-list *ngIf="lists().length > 0">
-          <mat-list-item *ngFor="let list of lists()">
-            <span matListItemTitle>{{ list.listName }}</span>
-            <span matListItemLine>{{ list.items.length }} items</span>
-            <span matListItemLine class="date">{{ list.createdAt | date:'short' }}</span>
-            <button 
-              mat-icon-button 
-              matListItemMeta
-              (click)="loadList(list)"
-              [disabled]="sortState().isActive">
-              <mat-icon>open_in_new</mat-icon>
-            </button>
-            <button 
-              mat-icon-button 
-              matListItemMeta
-              color="warn"
-              (click)="deleteList(list)"
-              [disabled]="sortState().isActive">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </mat-list-item>
-        </mat-list>
-        
-        <div class="no-lists" *ngIf="lists().length === 0">
-          <mat-icon>inbox</mat-icon>
-          <p>No saved lists yet</p>
-          <p>Complete a sort to save a list</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <app-saved-lists-sidebar
+      [lists]="lists()"
+      [isDisabled]="sortState().isActive"
+      (loadList)="loadList($event)"
+      (deleteList)="deleteList($event)">
+    </app-saved-lists-sidebar>
   </div>
 </div>

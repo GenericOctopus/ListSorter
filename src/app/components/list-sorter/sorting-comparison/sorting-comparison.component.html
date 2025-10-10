@@ -1,0 +1,61 @@
+<mat-card class="sorting-card">
+  <mat-card-header>
+    <mat-card-title>Which do you prefer?</mat-card-title>
+    <mat-card-subtitle>
+      Comparison {{ sortState().completedComparisons + 1 }} of ~{{ sortState().totalComparisons }}
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <mat-progress-bar 
+      mode="determinate" 
+      [value]="sortState().progress"
+      class="progress-bar">
+    </mat-progress-bar>
+
+    <div class="comparison-container">
+      <button 
+        mat-raised-button 
+        color="primary" 
+        class="comparison-button"
+        (click)="onSelectOption('A')">
+        <div class="comparison-content">
+          <mat-icon>thumb_up</mat-icon>
+          <span>{{ sortState().currentPair?.itemA }}</span>
+        </div>
+      </button>
+
+      <div class="or-divider">
+        <mat-divider></mat-divider>
+        <span>OR</span>
+        <mat-divider></mat-divider>
+      </div>
+
+      <button 
+        mat-raised-button 
+        color="primary" 
+        class="comparison-button"
+        (click)="onSelectOption('B')">
+        <div class="comparison-content">
+          <mat-icon>thumb_up</mat-icon>
+          <span>{{ sortState().currentPair?.itemB }}</span>
+        </div>
+      </button>
+    </div>
+
+    <button 
+      mat-stroked-button 
+      class="equal-button"
+      (click)="onSelectOption('Equal')">
+      <mat-icon>balance</mat-icon>
+      They're Equal
+    </button>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <button mat-button color="warn" (click)="onCancelSort()">
+      <mat-icon>cancel</mat-icon>
+      Cancel Sort
+    </button>
+  </mat-card-actions>
+</mat-card>

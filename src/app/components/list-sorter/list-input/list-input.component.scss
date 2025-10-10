@@ -1,0 +1,33 @@
+.input-card {
+  .file-upload-section, .paste-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(103, 126, 234, 0.05);
+    border-radius: 8px;
+    border: 2px dashed rgba(103, 126, 234, 0.3);
+  }
+  .file-upload-section { text-align: center; }
+  .paste-section mat-form-field { margin-bottom: 1rem; }
+  .paste-section button { width: 100%; }
+
+  .items-list {
+    margin-top: 1.5rem;
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    mat-chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}

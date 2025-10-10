@@ -1,0 +1,37 @@
+<mat-card class="lists-card">
+  <mat-card-header>
+    <mat-card-title>Saved Lists</mat-card-title>
+    <mat-card-subtitle *ngIf="lists().length > 0">{{ lists().length }} saved list{{ lists().length !== 1 ? 's' : '' }}</mat-card-subtitle>
+  </mat-card-header>
+  
+  <mat-card-content>
+    <mat-list *ngIf="lists().length > 0">
+      <mat-list-item *ngFor="let list of lists()">
+        <span matListItemTitle>{{ list.listName }}</span>
+        <span matListItemLine>{{ list.items.length }} items</span>
+        <span matListItemLine class="date">{{ list.createdAt | date:'short' }}</span>
+        <button 
+          mat-icon-button 
+          matListItemMeta
+          (click)="onLoadList(list)"
+          [disabled]="isDisabled()">
+          <mat-icon>open_in_new</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          matListItemMeta
+          color="warn"
+          (click)="onDeleteList(list)"
+          [disabled]="isDisabled()">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </mat-list-item>
+    </mat-list>
+    
+    <div class="no-lists" *ngIf="lists().length === 0">
+      <mat-icon>inbox</mat-icon>
+      <p>No saved lists yet</p>
+      <p>Complete a sort to save a list</p>
+    </div>
+  </mat-card-content>
+</mat-card>
