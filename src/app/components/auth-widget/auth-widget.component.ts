@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -19,8 +19,21 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './auth-widget.component.html',
   styleUrls: ['./auth-widget.component.scss'],
 })
-export class AuthWidgetComponent {
+export class AuthWidgetComponent implements OnInit {
   authService = inject(AuthService);
+  isAuthServerAvailable = signal(false);
+  isChecking = signal(true);
+
+  async ngOnInit() {
+    await this.checkAuthServer();
+  }
+
+  private async checkAuthServer(): Promise<void> {
+    this.isChecking.set(true);
+    const available = await this.authService.checkServerAvailability();
+    this.isAuthServerAvailable.set(available);
+    this.isChecking.set(false);
+  }
 
   logout(): void {
     this.authService.logout();

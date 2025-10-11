@@ -186,6 +186,24 @@ export class AuthService {
     }
   }
 
+  async checkServerAvailability(): Promise<boolean> {
+    if (!this.isBrowser) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${this.AUTH_SERVER_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000), // 3 second timeout
+      });
+
+      return response.ok;
+    } catch (error) {
+      // Server not available
+      return false;
+    }
+  }
+
   logout(): void {
     this.setStoredAuth(null);
     this.currentUserSubject.next(null);
