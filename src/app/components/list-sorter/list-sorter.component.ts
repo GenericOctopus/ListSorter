@@ -9,6 +9,7 @@ import { ListInputComponent } from './list-input/list-input.component';
 import { SortingComparisonComponent } from './sorting-comparison/sorting-comparison.component';
 import { TierResultsComponent } from './tier-results/tier-results.component';
 import { SavedListsSidebarComponent } from './saved-lists-sidebar/saved-lists-sidebar.component';
+import { AuthWidgetComponent } from '../auth-widget/auth-widget.component';
 
 @Component({
   selector: 'app-list-sorter',
@@ -19,7 +20,8 @@ import { SavedListsSidebarComponent } from './saved-lists-sidebar/saved-lists-si
     ListInputComponent,
     SortingComparisonComponent,
     TierResultsComponent,
-    SavedListsSidebarComponent
+    SavedListsSidebarComponent,
+    AuthWidgetComponent
   ],
   templateUrl: './list-sorter.component.html',
   styleUrl: './list-sorter.component.scss'

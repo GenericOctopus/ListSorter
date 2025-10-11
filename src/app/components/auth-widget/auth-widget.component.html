@@ -1,0 +1,37 @@
+<mat-card class="auth-widget">
+  @if (authService.currentUser$ | async; as user) {
+    <!-- Logged in state -->
+    <div class="auth-content logged-in">
+      <div class="user-info">
+        <mat-icon class="user-icon">account_circle</mat-icon>
+        <div class="user-details">
+          <span class="username">{{ user.username }}</span>
+          <span class="sync-status">
+            <mat-icon class="sync-icon">cloud_done</mat-icon>
+            Syncing
+          </span>
+        </div>
+      </div>
+      <button mat-button (click)="logout()" class="logout-btn">
+        <mat-icon>logout</mat-icon>
+        Logout
+      </button>
+    </div>
+  } @else {
+    <!-- Logged out state -->
+    <div class="auth-content logged-out">
+      <div class="auth-message">
+        <mat-icon class="cloud-icon">cloud_off</mat-icon>
+        <p class="message-text">Sign in to sync your lists across devices</p>
+      </div>
+      <div class="auth-buttons">
+        <button mat-raised-button color="primary" routerLink="/login">
+          Login
+        </button>
+        <button mat-stroked-button routerLink="/register">
+          Register
+        </button>
+      </div>
+    </div>
+  }
+</mat-card>

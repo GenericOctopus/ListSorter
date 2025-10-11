@@ -1,5 +1,6 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { AuthService } from './auth.service';
 
 export interface ListItem {
   _id?: string;
@@ -31,11 +32,15 @@ export interface SortedList {
 })
 export class DatabaseService {
   private db: any;
+  private remoteDb: any;
+  private syncHandler: any;
   private isBrowser: boolean;
   private dbReady: Promise<void>;
+  private authService: AuthService;
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
+    this.authService = inject(AuthService);
     this.isBrowser = isPlatformBrowser(platformId);
     
     if (this.isBrowser) {
@@ -43,14 +48,122 @@ export class DatabaseService {
       this.dbReady = import('pouchdb').then((PouchDB) => {
         this.db = new PouchDB.default('list-sorter-db');
         console.log('PouchDB initialized and ready');
+        
+        // Set up sync if user is authenticated
+        this.setupSync();
       });
     } else {
       this.dbReady = Promise.resolve();
+    }
+
+    // Listen for auth changes to setup/teardown sync
+    if (this.isBrowser) {
+      this.authService.currentUser$.subscribe((user) => {
+        if (user) {
+          this.setupSync();
+        } else {
+          this.cancelSync();
+        }
+      });
     }
   }
 
   private async ensureReady(): Promise<void> {
     await this.dbReady;
+  }
+
+  private async setupSync(): Promise<void> {
+    await this.ensureReady();
+    if (!this.db || !this.isBrowser) return;
+
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    try {
+      const syncConfig = await this.authService.getSyncConfig();
+      if (!syncConfig) {
+        console.error('Failed to get sync configuration');
+        return;
+      }
+
+      // Cancel existing sync if any
+      this.cancelSync();
+
+      // Import PouchDB if not already imported
+      const PouchDB = (await import('pouchdb')).default;
+
+      // Create remote database URL with user credentials
+      // Note: In production, you might want to use a proxy or different auth method
+      const remoteUrl = `${syncConfig.couchUrl}/${syncConfig.dbName}`;
+      
+      console.log('Setting up sync with:', remoteUrl);
+
+      this.remoteDb = new PouchDB(remoteUrl, {
+        skip_setup: true, // Database already exists, created by auth server
+      });
+
+      // Set up bidirectional sync
+      this.syncHandler = this.db.sync(this.remoteDb, {
+        live: true,
+        retry: true,
+      })
+        .on('change', (info: any) => {
+          console.log('Sync change:', info);
+        })
+        .on('paused', (err: any) => {
+          console.log('Sync paused:', err);
+        })
+        .on('active', () => {
+          console.log('Sync resumed');
+        })
+        .on('denied', (err: any) => {
+          console.error('Sync denied:', err);
+        })
+        .on('complete', (info: any) => {
+          console.log('Sync complete:', info);
+        })
+        .on('error', (err: any) => {
+          console.error('Sync error:', err);
+        });
+
+      console.log('Sync setup complete');
+    } catch (error) {
+      console.error('Error setting up sync:', error);
+    }
+  }
+
+  private cancelSync(): void {
+    if (this.syncHandler) {
+      console.log('Cancelling sync');
+      this.syncHandler.cancel();
+      this.syncHandler = null;
+    }
+    if (this.remoteDb) {
+      this.remoteDb = null;
+    }
+  }
+
+  async forceSyncNow(): Promise<void> {
+    if (!this.db || !this.remoteDb || !this.isBrowser) {
+      console.log('Cannot force sync: database not ready or not syncing');
+      return;
+    }
+
+    try {
+      console.log('Forcing immediate sync...');
+      await this.db.replicate.to(this.remoteDb);
+      await this.db.replicate.from(this.remoteDb);
+      console.log('Force sync complete');
+    } catch (error) {
+      console.error('Error during force sync:', error);
+    }
+  }
+
+  getSyncStatus(): { isSetup: boolean; isActive: boolean } {
+    return {
+      isSetup: !!this.syncHandler,
+      isActive: !!this.syncHandler && !!this.authService.currentUserValue,
+    };
   }
 
   async saveListItem(item: ListItem): Promise<any> {

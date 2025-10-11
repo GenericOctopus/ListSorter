@@ -49,8 +49,10 @@
     </app-tier-results>
   </div>
 
-  <!-- Sidebar with saved lists -->
+  <!-- Sidebar with auth widget and saved lists -->
   <div class="sidebar">
+    <app-auth-widget></app-auth-widget>
+    
     <app-saved-lists-sidebar
       [lists]="lists()"
       [isDisabled]="sortState().isActive"
