@@ -1,0 +1,41 @@
+# Node modules
+node_modules
+auth-server/node_modules
+
+# Build outputs
+dist
+.angular
+
+# Environment files
+.env
+.env.local
+.env.*.local
+auth-server/.env
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.windsurf
+.idea
+
+# Logs
+*.log
+npm-debug.log*
+auth-server.log
+angular.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage
+.nyc_output
+
+# Misc
+*.pid
+.auth-server.pid
+.angular.pid

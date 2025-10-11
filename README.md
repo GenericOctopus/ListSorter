@@ -15,13 +15,33 @@ A powerful Angular application for sorting and ranking lists using merge sort al
 
 ## Quick Start
 
-### Prerequisites
+### 🐳 Docker Deployment (Recommended)
+
+The easiest way to get started:
+
+```bash
+# One command to start everything
+./docker-start.sh
+```
+
+This starts:
+- CouchDB (with auto-configured CORS)
+- Authentication server
+- Angular frontend (production build)
+
+Access at: **http://localhost**
+
+See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for details.
+
+### 💻 Local Development Setup
+
+#### Prerequisites
 
 - Node.js and npm
 - CouchDB installed and running
 - Angular CLI
 
-### Setup with Authentication (Recommended)
+#### Setup with Authentication
 
 1. **Run the automated setup**:
    ```bash
@@ -93,6 +113,7 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 ## Documentation
 
+- **[DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md)** - Docker deployment guide (recommended)
 - **[QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
 - **[AUTH_SETUP.md](./AUTH_SETUP.md)** - Detailed authentication setup guide
 - **[auth-server/README.md](./auth-server/README.md)** - Auth server API reference
@@ -135,6 +156,13 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 ## Scripts
 
+### Docker
+- `./docker-start.sh` - Start all services with Docker (recommended)
+- `docker-compose up -d` - Start services in background
+- `docker-compose down` - Stop all services
+- `docker-compose logs -f` - View logs
+
+### Development
 - `npm start` - Start Angular development server
 - `npm run build` - Build for production
 - `npm test` - Run unit tests
