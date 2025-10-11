@@ -48,7 +48,7 @@ export class ListSorterComponent {
   protected showAdvancedSettings = signal(false);
   
   // Tier percentages (default values)
-  protected tierPercentages = signal<number[]>([10, 20, 30, 25, 10, 5]);
+  protected tierPercentages = signal<number[]>([10, 20, 20, 20, 20, 10]);
   protected tierNames = ['S', 'A', 'B', 'C', 'D', 'F'];
   
   // Lists
@@ -382,7 +382,7 @@ export class ListSorterComponent {
   
   // Reset tier percentages to defaults
   resetTierPercentages(): void {
-    this.tierPercentages.set([10, 20, 30, 25, 10, 5]);
+    this.tierPercentages.set([10, 20, 20, 20, 20, 10]);
     this.snackBar.open('Tier percentages reset to defaults', 'Close', { duration: 2000 });
   }
   
