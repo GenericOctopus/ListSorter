@@ -7,15 +7,15 @@
     <mat-card-content>
       <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Username</mat-label>
+          <mat-label>Email</mat-label>
           <input
             matInput
-            type="text"
-            [(ngModel)]="username"
-            name="username"
+            type="email"
+            [(ngModel)]="email"
+            name="email"
             required
             [disabled]="loading"
-            autocomplete="username"
+            autocomplete="email"
           />
         </mat-form-field>
 

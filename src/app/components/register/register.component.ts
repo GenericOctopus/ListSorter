@@ -26,7 +26,8 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./register.component.scss'],
 })
 export class RegisterComponent {
-  username = '';
+  email = '';
+  name = '';
   password = '';
   confirmPassword = '';
   loading = false;
@@ -39,23 +40,18 @@ export class RegisterComponent {
 
   async onSubmit() {
     // Validation
-    if (!this.username || !this.password || !this.confirmPassword) {
+    if (!this.email || !this.name || !this.password || !this.confirmPassword) {
       this.error = 'Please fill in all fields';
       return;
     }
 
-    if (this.username.length < 3) {
-      this.error = 'Username must be at least 3 characters';
+    if (this.name.length < 2) {
+      this.error = 'Name must be at least 2 characters';
       return;
     }
 
-    if (!/^[a-zA-Z0-9_]+$/.test(this.username)) {
-      this.error = 'Username can only contain letters, numbers, and underscores';
-      return;
-    }
-
-    if (this.password.length < 6) {
-      this.error = 'Password must be at least 6 characters';
+    if (this.password.length < 8) {
+      this.error = 'Password must be at least 8 characters';
       return;
     }
 
@@ -67,7 +63,7 @@ export class RegisterComponent {
     this.loading = true;
     this.error = '';
 
-    const result = await this.authService.register(this.username, this.password);
+    const result = await this.authService.register(this.email, this.password, this.name);
 
     this.loading = false;
 

@@ -1,27 +1,28 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { Client, Account, Databases, Query, Models, ID } from 'appwrite';
+import { environment } from '../../environments/environment';
+import { SortedListDocument } from './rxdb-schemas';
 
 export interface AuthUser {
-  username: string;
-  token: string;
-  dbName: string;
+  userId: string;
+  email: string;
+  name: string;
 }
 
-export interface LoginResponse {
-  message: string;
-  token: string;
-  username: string;
-  dbName: string;
+export interface AppwriteReplicationConfig {
+  pullHandler: (lastCheckpoint: number, batchSize: number) => Promise<SortedListDocument[]>;
+  pushHandler: (docs: any[]) => Promise<void>;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly AUTH_STORAGE_KEY = 'list_sorter_auth';
-  private readonly AUTH_SERVER_URL = 'http://localhost:3001';
-  
+  private client: Client;
+  private account: Account;
+  private databases: Databases;
   private currentUserSubject: BehaviorSubject<AuthUser | null>;
   public currentUser$: Observable<AuthUser | null>;
   private isBrowser: boolean;
@@ -30,30 +31,35 @@ export class AuthService {
     const platformId = inject(PLATFORM_ID);
     this.isBrowser = isPlatformBrowser(platformId);
     
-    // Initialize with stored auth data if available
-    const storedAuth = this.isBrowser ? this.getStoredAuth() : null;
-    this.currentUserSubject = new BehaviorSubject<AuthUser | null>(storedAuth);
-    this.currentUser$ = this.currentUserSubject.asObservable();
-  }
-
-  private getStoredAuth(): AuthUser | null {
-    if (!this.isBrowser) return null;
+    // Initialize AppWrite client
+    this.client = new Client();
+    this.client
+      .setEndpoint(environment.appwrite.endpoint)
+      .setProject(environment.appwrite.projectId);
     
-    try {
-      const stored = localStorage.getItem(this.AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
+    this.account = new Account(this.client);
+    this.databases = new Databases(this.client);
+    
+    // Initialize with current session if available
+    this.currentUserSubject = new BehaviorSubject<AuthUser | null>(null);
+    this.currentUser$ = this.currentUserSubject.asObservable();
+    
+    if (this.isBrowser) {
+      this.checkCurrentSession();
     }
   }
 
-  private setStoredAuth(auth: AuthUser | null): void {
-    if (!this.isBrowser) return;
-    
-    if (auth) {
-      localStorage.setItem(this.AUTH_STORAGE_KEY, JSON.stringify(auth));
-    } else {
-      localStorage.removeItem(this.AUTH_STORAGE_KEY);
+  private async checkCurrentSession(): Promise<void> {
+    try {
+      const session = await this.account.get();
+      this.currentUserSubject.next({
+        userId: session.$id,
+        email: session.email,
+        name: session.name
+      });
+    } catch (error) {
+      // No active session
+      this.currentUserSubject.next(null);
     }
   }
 
@@ -65,125 +71,169 @@ export class AuthService {
     return !!this.currentUserValue;
   }
 
-  async register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+  async register(email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isBrowser) {
       return { success: false, error: 'Not in browser environment' };
     }
 
     try {
-      const response = await fetch(`${this.AUTH_SERVER_URL}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      // Create account
+      await this.account.create(ID.unique(), email, password, name);
+      
+      // Automatically log in after registration
+      const session = await this.account.createEmailPasswordSession(email, password);
+      
+      this.currentUserSubject.next({
+        userId: session.userId,
+        email: email,
+        name: name
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-
-      const authUser: AuthUser = {
-        username: data.username,
-        token: data.token,
-        dbName: data.dbName,
-      };
-
-      this.setStoredAuth(authUser);
-      this.currentUserSubject.next(authUser);
-
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      return { success: false, error: 'Network error. Please check if the auth server is running.' };
+      return { 
+        success: false, 
+        error: error.message || 'Registration failed' 
+      };
     }
   }
 
-  async login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+  async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isBrowser) {
       return { success: false, error: 'Not in browser environment' };
     }
 
     try {
-      const response = await fetch(`${this.AUTH_SERVER_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const session = await this.account.createEmailPasswordSession(email, password);
+      
+      const user = await this.account.get();
+      this.currentUserSubject.next({
+        userId: user.$id,
+        email: user.email,
+        name: user.name
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return { success: false, error: data.error || 'Login failed' };
-      }
-
-      const authUser: AuthUser = {
-        username: data.username,
-        token: data.token,
-        dbName: data.dbName,
-      };
-
-      this.setStoredAuth(authUser);
-      this.currentUserSubject.next(authUser);
-
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      return { success: false, error: 'Network error. Please check if the auth server is running.' };
+      return { 
+        success: false, 
+        error: error.message || 'Login failed' 
+      };
     }
   }
 
   async verifyToken(): Promise<boolean> {
-    if (!this.isBrowser || !this.currentUserValue) {
+    if (!this.isBrowser) {
       return false;
     }
 
     try {
-      const response = await fetch(`${this.AUTH_SERVER_URL}/verify`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.currentUserValue.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        this.logout();
-        return false;
-      }
-
+      await this.account.get();
       return true;
     } catch (error) {
-      console.error('Token verification error:', error);
+      this.logout();
       return false;
     }
   }
 
-  async getSyncConfig(): Promise<{ dbName: string; couchUrl: string; username: string } | null> {
+  async getAppwriteConfig(): Promise<AppwriteReplicationConfig | null> {
     if (!this.isBrowser || !this.currentUserValue) {
       return null;
     }
 
-    try {
-      const response = await fetch(`${this.AUTH_SERVER_URL}/sync-config`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.currentUserValue.token}`,
-        },
-      });
+    const userId = this.currentUserValue.userId;
+    const databaseId = environment.appwrite.databaseId;
+    const collectionId = environment.appwrite.collectionsId.lists;
 
-      if (!response.ok) {
-        return null;
+    return {
+      pullHandler: async (lastCheckpoint: number, batchSize: number): Promise<SortedListDocument[]> => {
+        try {
+          const queries = [
+            Query.equal('userId', userId),
+            Query.greaterThan('updatedAt', lastCheckpoint),
+            Query.limit(batchSize),
+            Query.orderAsc('updatedAt')
+          ];
+
+          const response = await this.databases.listDocuments(
+            databaseId,
+            collectionId,
+            queries
+          );
+
+          return response.documents.map((doc: any) => ({
+            id: doc.$id,
+            listName: doc.listName,
+            items: doc.items,
+            sortedItems: doc.sortedItems,
+            tieredItems: doc.tieredItems,
+            completed: doc.completed,
+            createdAt: doc.createdAt,
+            completedAt: doc.completedAt,
+            userId: doc.userId,
+            updatedAt: doc.updatedAt
+          }));
+        } catch (error) {
+          console.error('Pull handler error:', error);
+          return [];
+        }
+      },
+
+      pushHandler: async (docs: any[]): Promise<void> => {
+        try {
+          for (const docData of docs) {
+            const doc = docData.newDocumentState;
+            
+            try {
+              // Try to update existing document
+              await this.databases.updateDocument(
+                databaseId,
+                collectionId,
+                doc.id,
+                {
+                  listName: doc.listName,
+                  items: doc.items,
+                  sortedItems: doc.sortedItems || [],
+                  tieredItems: doc.tieredItems || [],
+                  completed: doc.completed,
+                  createdAt: doc.createdAt,
+                  completedAt: doc.completedAt,
+                  userId: doc.userId,
+                  updatedAt: doc.updatedAt
+                }
+              );
+            } catch (error: any) {
+              // If document doesn't exist, create it
+              if (error.code === 404) {
+                await this.databases.createDocument(
+                  databaseId,
+                  collectionId,
+                  doc.id,
+                  {
+                    listName: doc.listName,
+                    items: doc.items,
+                    sortedItems: doc.sortedItems || [],
+                    tieredItems: doc.tieredItems || [],
+                    completed: doc.completed,
+                    createdAt: doc.createdAt,
+                    completedAt: doc.completedAt,
+                    userId: doc.userId,
+                    updatedAt: doc.updatedAt
+                  }
+                );
+              } else {
+                throw error;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Push handler error:', error);
+          throw error;
+        }
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting sync config:', error);
-      return null;
-    }
+    };
   }
 
   async checkServerAvailability(): Promise<boolean> {
@@ -192,25 +242,34 @@ export class AuthService {
     }
 
     try {
-      const response = await fetch(`${this.AUTH_SERVER_URL}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000), // 3 second timeout
-      });
-
-      return response.ok;
+      await this.account.get();
+      return true;
     } catch (error) {
-      // Server not available
       return false;
     }
   }
 
-  logout(): void {
-    this.setStoredAuth(null);
-    this.currentUserSubject.next(null);
+  async logout(): Promise<void> {
+    if (!this.isBrowser) return;
+
+    try {
+      await this.account.deleteSession('current');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      this.currentUserSubject.next(null);
+    }
   }
 
-  getAuthHeader(): string | null {
-    const user = this.currentUserValue;
-    return user ? `Bearer ${user.token}` : null;
+  getClient(): Client {
+    return this.client;
+  }
+
+  getAccount(): Account {
+    return this.account;
+  }
+
+  getDatabases(): Databases {
+    return this.databases;
   }
 }
