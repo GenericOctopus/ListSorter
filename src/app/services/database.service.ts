@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { createRxDatabase, RxDatabase, RxCollection } from 'rxdb';
+import { createRxDatabase, RxDatabase, RxCollection, removeRxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { replicateRxCollection, RxReplicationState } from 'rxdb/plugins/replication';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
@@ -59,39 +59,91 @@ export class DatabaseService {
 
   private async initDatabase(): Promise<void> {
     try {
-      this.db = await createRxDatabase<DatabaseCollections>({
-        name: 'list-sorter-db',
-        storage: getRxStorageDexie(),
-        ignoreDuplicate: true
-      });
+      console.log('Starting RxDB initialization...');
+      const dbName = 'list-sorter-db';
+      const storage = getRxStorageDexie();
 
+      // Try to create the database
+      try {
+        console.log('Creating RxDB database:', dbName);
+        this.db = await createRxDatabase<DatabaseCollections>({
+          name: dbName,
+          storage: storage,
+          multiInstance: false,
+          ignoreDuplicate: false
+        });
+        console.log('Database created successfully');
+      } catch (error: any) {
+        // If database already exists (DB9 error), remove and recreate
+        if (error.code === 'DB9' || error.parameters?.database === dbName) {
+          console.log('Database already exists, removing and recreating...');
+          await removeRxDatabase(dbName, storage);
+          
+          this.db = await createRxDatabase<DatabaseCollections>({
+            name: dbName,
+            storage: storage,
+            multiInstance: false,
+            ignoreDuplicate: false
+          });
+          console.log('Database recreated successfully');
+        } else {
+          throw error;
+        }
+      }
+
+      console.log('Adding collections...');
       await this.db.addCollections({
         lists: {
           schema: sortedListSchema
         }
       });
+      console.log('Collections added successfully');
 
-      console.log('RxDB initialized and ready');
+      console.log('RxDB initialized and ready. Database:', this.db);
+      console.log('Database name:', this.db.name);
+      console.log('Collections:', Object.keys(this.db.collections));
       
-      // Set up sync if user is authenticated
-      await this.setupSync();
+      // Test query to verify database is working
+      const testQuery = await this.db.lists.find().exec();
+      console.log('Test query result - existing documents:', testQuery.length);
+      
+      // Set up sync if user is authenticated (don't await ensureReady since we're already initialized)
+      this.setupSyncInternal();
     } catch (error) {
       console.error('Error initializing RxDB:', error);
+      throw error;
     }
   }
 
   private async ensureReady(): Promise<void> {
-    await this.dbReady;
+    console.log('ensureReady: waiting for dbReady promise...');
+    try {
+      await this.dbReady;
+      console.log('ensureReady: dbReady promise resolved');
+    } catch (error) {
+      console.error('ensureReady: dbReady promise rejected:', error);
+      throw error;
+    }
   }
 
   private async setupSync(): Promise<void> {
     await this.ensureReady();
+    this.setupSyncInternal();
+  }
+
+  private async setupSyncInternal(): Promise<void> {
     if (!this.db || !this.isBrowser) return;
 
     const user = this.authService.currentUserValue;
     if (!user) return;
 
     try {
+      // Migrate local lists to the authenticated user
+      const migratedCount = await this.migrateLocalListsToUser(user.userId);
+      if (migratedCount > 0) {
+        console.log(`Migrated ${migratedCount} local lists to user account`);
+      }
+
       // Cancel existing sync if any
       this.cancelSync();
 
@@ -198,18 +250,26 @@ export class DatabaseService {
   }
 
   async saveSortedList(list: SortedList): Promise<any> {
-    if (!this.isBrowser) return null;
+    console.log('saveSortedList called, isBrowser:', this.isBrowser);
+    if (!this.isBrowser) {
+      console.log('Not in browser, returning null');
+      return null;
+    }
+    
+    console.log('Ensuring database is ready...');
     await this.ensureReady();
-    if (!this.db) return null;
-
-    const user = this.authService.currentUserValue;
-    if (!user) {
-      console.error('Cannot save list: user not authenticated');
+    
+    console.log('Database ready, db exists:', !!this.db);
+    if (!this.db) {
+      console.error('Database is null after ensureReady!');
       return null;
     }
 
+    const user = this.authService.currentUserValue;
     const id = list._id || `list_${Date.now()}`;
     const now = Date.now();
+    
+    console.log('User:', user, 'ID:', id);
 
     const doc: SortedListDocument = {
       id,
@@ -220,20 +280,29 @@ export class DatabaseService {
       completed: list.completed,
       createdAt: list.createdAt ? list.createdAt.getTime() : now,
       completedAt: list.completedAt ? list.completedAt.getTime() : undefined,
-      userId: user.userId,
+      userId: user ? user.userId : 'local', // Use 'local' for unauthenticated users
       updatedAt: now
     };
 
     try {
+      console.log('Saving list with id:', id, 'userId:', doc.userId);
+      
       // Check if document exists
-      const existing = await this.db.lists.findOne(id).exec();
+      const existing = await this.db.lists.findOne({
+        selector: { id: id }
+      }).exec();
+      
       if (existing) {
+        console.log('Updating existing list');
         await existing.update({
           $set: doc
         });
       } else {
+        console.log('Inserting new list');
         await this.db.lists.insert(doc);
       }
+      
+      console.log('List saved successfully');
       return { id };
     } catch (error) {
       console.error('Error saving list:', error);
@@ -247,7 +316,9 @@ export class DatabaseService {
     if (!this.db) return null;
 
     try {
-      const doc = await this.db.lists.findOne(id).exec();
+      const doc = await this.db.lists.findOne({
+        selector: { id: id }
+      }).exec();
       if (!doc) return null;
       return this.convertToSortedList(doc.toJSON() as SortedListDocument);
     } catch (error) {
@@ -262,13 +333,13 @@ export class DatabaseService {
     if (!this.db) return [];
 
     const user = this.authService.currentUserValue;
-    if (!user) return [];
+    const userId = user ? user.userId : 'local';
 
     try {
       const docs = await this.db.lists
         .find({
           selector: {
-            userId: user.userId
+            userId: userId
           },
           sort: [{ createdAt: 'desc' }]
         })
@@ -289,14 +360,12 @@ export class DatabaseService {
     }
 
     const user = this.authService.currentUserValue;
-    if (!user) {
-      return new Observable(subscriber => subscriber.next([]));
-    }
+    const userId = user ? user.userId : 'local';
 
     return this.db.lists
       .find({
         selector: {
-          userId: user.userId
+          userId: userId
         },
         sort: [{ createdAt: 'desc' }]
       })
@@ -315,7 +384,9 @@ export class DatabaseService {
     if (!this.db) return null;
 
     try {
-      const doc = await this.db.lists.findOne(id).exec();
+      const doc = await this.db.lists.findOne({
+        selector: { id: id }
+      }).exec();
       if (doc) {
         await doc.remove();
       }
@@ -331,7 +402,13 @@ export class DatabaseService {
     if (!this.db) return;
 
     try {
+      const dbName = 'list-sorter-db';
+      const storage = getRxStorageDexie();
+      
       await this.db.remove();
+      this.db = null;
+      
+      await removeRxDatabase(dbName, storage);
       await this.initDatabase();
     } catch (error) {
       console.error('Error clearing database:', error);
@@ -349,6 +426,42 @@ export class DatabaseService {
       createdAt: new Date(doc.createdAt),
       completedAt: doc.completedAt ? new Date(doc.completedAt) : undefined
     };
+  }
+
+  /**
+   * Migrate local lists to authenticated user
+   * Called when user logs in to associate their local data with their account
+   */
+  async migrateLocalListsToUser(userId: string): Promise<number> {
+    if (!this.isBrowser || !this.db) return 0;
+
+    try {
+      // Find all lists with userId 'local'
+      const localLists = await this.db.lists
+        .find({
+          selector: {
+            userId: 'local'
+          }
+        })
+        .exec();
+
+      console.log(`Migrating ${localLists.length} local lists to user ${userId}`);
+
+      // Update each list to the new userId
+      for (const list of localLists) {
+        await list.update({
+          $set: {
+            userId: userId,
+            updatedAt: Date.now()
+          }
+        });
+      }
+
+      return localLists.length;
+    } catch (error) {
+      console.error('Error migrating local lists:', error);
+      return 0;
+    }
   }
 }
 

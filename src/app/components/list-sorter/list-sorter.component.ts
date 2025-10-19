@@ -122,6 +122,8 @@ export class ListSorterComponent {
         completedAt: new Date()
       };
       
+      console.log('About to save list:', list);
+      
       // If updating an existing list, get the _rev
       if (this.currentListId()) {
         const existing = await this.databaseService.getSortedList(this.currentListId()!);
@@ -132,11 +134,13 @@ export class ListSorterComponent {
       }
       
       await this.databaseService.saveSortedList(list);
+      console.log('List saved, reloading lists...');
       this.currentListId.set(list._id); // Store the list ID
       await this.loadLists();
       
       this.snackBar.open('Sort completed and saved!', 'Close', { duration: 3000 });
     } catch (error) {
+      console.error('Error during sorting/saving:', error);
       this.snackBar.open('Error during sorting', 'Close', { duration: 3000 });
     }
   }
