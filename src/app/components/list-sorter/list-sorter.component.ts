@@ -318,33 +318,35 @@ export class ListSorterComponent {
   }
 
   private calculateTiers(sortedItems: string[]): TierGroup[] {
-    if (sortedItems.length === 0) return [];
-    
     const itemCount = sortedItems.length;
     const percentages = this.tierPercentages();
     
     const tiers: TierGroup[] = [];
     let currentIndex = 0;
     
-    for (let i = 0; i < this.tierNames.length && currentIndex < itemCount; i++) {
-      const tierSize = Math.max(1, Math.round(itemCount * percentages[i] / 100));
+    for (let i = 0; i < this.tierNames.length; i++) {
+      // Skip tiers with 0% allocation
+      if (percentages[i] === 0) {
+        continue;
+      }
+      
+      // Calculate tier size based on percentage
+      const tierSize = itemCount > 0 ? Math.max(1, Math.round(itemCount * percentages[i] / 100)) : 0;
       const endIndex = Math.min(currentIndex + tierSize, itemCount);
       
-      if (currentIndex < itemCount) {
-        tiers.push({
-          tier: this.tierNames[i],
-          items: sortedItems.slice(currentIndex, endIndex)
-        });
-        currentIndex = endIndex;
-      }
+      // Always create the tier if percentage > 0, even if it's empty
+      tiers.push({
+        tier: this.tierNames[i],
+        items: currentIndex < itemCount ? sortedItems.slice(currentIndex, endIndex) : []
+      });
+      
+      currentIndex = endIndex;
     }
     
-    // If there are remaining items (due to rounding), add them to the last tier
-    if (currentIndex < itemCount) {
+    // If there are remaining items (due to rounding), add them to the last non-zero tier
+    if (currentIndex < itemCount && tiers.length > 0) {
       const lastTier = tiers[tiers.length - 1];
-      if (lastTier) {
-        lastTier.items.push(...sortedItems.slice(currentIndex));
-      }
+      lastTier.items.push(...sortedItems.slice(currentIndex));
     }
     
     return tiers;
