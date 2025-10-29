@@ -5,7 +5,7 @@
   </mat-card-header>
   
   <mat-card-content>
-    <mat-stepper #stepper linear>
+    <mat-stepper #stepper linear [orientation]="(stepperOrientation | async) ?? 'horizontal'">
       <!-- Step 1: Name Your List -->
       <mat-step [completed]="isStep1Valid()">
         <ng-template matStepLabel>Name Your List</ng-template>
@@ -97,18 +97,22 @@
             </button>
           </div>
 
-          <div class="items-list" *ngIf="items().length > 0">
-            <h3>Items ({{ items().length }})</h3>
-            <div class="items-grid">
-              <div *ngFor="let item of items(); let i = index" class="item-card">
-                <div 
-                  *ngIf="!isEditingItem(i)" 
-                  class="item-display"
-                  (click)="!isDisabled() && startEditingItem(i, item)">
-                  <span class="item-name">{{ item }}</span>
-                </div>
-                
-                <div *ngIf="isEditingItem(i)" class="item-edit">
+          @if (items().length > 0) {
+            <div class="items-list">
+              <h3>Items ({{ items().length }})</h3>
+              <div class="items-grid">
+                @for (item of items(); track item; let i = $index) {
+                  <div class="item-card">
+                    @if (!isEditingItem(i)) {
+                      <div 
+                        class="item-display"
+                        (click)="!isDisabled() && startEditingItem(i, item)">
+                        <span class="item-name">{{ item }}</span>
+                      </div>
+                    }
+                    
+                    @if (isEditingItem(i)) {
+                      <div class="item-edit">
                   <mat-form-field appearance="outline" class="item-edit-field">
                     <input 
                       matInput 
@@ -123,20 +127,24 @@
                   <button mat-icon-button (click)="cancelEditingItem()">
                     <mat-icon>close</mat-icon>
                   </button>
-                </div>
-                
-                <button 
-                  *ngIf="!isEditingItem(i)"
-                  mat-icon-button 
-                  color="warn"
-                  class="delete-button"
-                  (click)="$event.stopPropagation(); onRemoveItem(item)"
-                  [disabled]="isDisabled()">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                      </div>
+                    }
+                    
+                    @if (!isEditingItem(i)) {
+                      <button 
+                        mat-icon-button 
+                        color="warn"
+                        class="delete-button"
+                        (click)="$event.stopPropagation(); onRemoveItem(item)"
+                        [disabled]="isDisabled()">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    }
+                  </div>
+                }
               </div>
             </div>
-          </div>
+          }
 
           <div class="step-actions">
             <button mat-button (click)="goToPreviousStep()">
@@ -179,16 +187,20 @@
             </div>
           </div>
 
-          <div class="items-list" *ngIf="items().length > 0">
-            <h3>Your Items</h3>
-            <div class="items-grid">
-              <div *ngFor="let item of items(); let i = index" class="item-card">
-                <div class="item-display">
-                  <span class="item-name">{{ item }}</span>
-                </div>
+          @if (items().length > 0) {
+            <div class="items-list">
+              <h3>Your Items</h3>
+              <div class="items-grid">
+                @for (item of items(); track item; let i = $index) {
+                  <div class="item-card">
+                    <div class="item-display">
+                      <span class="item-name">{{ item }}</span>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
-          </div>
+          }
 
           <div class="step-actions">
             <button mat-button (click)="goToPreviousStep()">

@@ -1,5 +1,5 @@
-import { Component, input, output, signal, computed, viewChild } from '@angular/core';
-import { CommonModule, NgIf, NgFor } from '@angular/common';
+import { Component, input, output, signal, computed, viewChild, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,15 +9,16 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatStepperModule } from '@angular/material/stepper';
-import { MatStepper } from '@angular/material/stepper';
+import { MatStepper, StepperOrientation } from '@angular/material/stepper';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-list-input',
   standalone: true,
   imports: [
     CommonModule,
-    NgIf,
-    NgFor,
     FormsModule,
     MatCardModule,
     MatButtonModule,
@@ -60,6 +61,14 @@ export class ListInputComponent {
 
   // Stepper reference
   stepper = viewChild<MatStepper>('stepper');
+
+  // Breakpoint observer for responsive stepper
+  private breakpointObserver = inject(BreakpointObserver);
+
+  // Stepper orientation based on screen size
+  stepperOrientation: Observable<StepperOrientation> = this.breakpointObserver
+    .observe([Breakpoints.XSmall, Breakpoints.Small])
+    .pipe(map(({ matches }) => (matches ? 'vertical' : 'horizontal')));
 
   // Computed signals for stepper validation
   protected isStep1Valid = computed(() => {
