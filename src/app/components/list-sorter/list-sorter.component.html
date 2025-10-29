@@ -19,7 +19,8 @@
       (startSort)="startSort()"
       (clearList)="clearList()"
       (fileSelected)="onFileSelected($event)"
-      (addPastedItems)="addPastedItems()">
+      (addPastedItems)="addPastedItems()"
+      (editItem)="editItemInList($event)">
     </app-list-input>
 
     <!-- Sorting Section -->
@@ -46,7 +47,9 @@
       (itemDrop)="onItemDrop($event)"
       (hideResults)="showResults.set(false)"
       (resortEntireList)="resortEntireList()"
-      (createNewList)="clearList()">
+      (createNewList)="clearList()"
+      (listNameChange)="updateListName($event)"
+      (itemNameChange)="updateItemName($event)">
     </app-tier-results>
   </div>
 

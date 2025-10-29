@@ -75,14 +75,43 @@
 
     <div class="items-list" *ngIf="items().length > 0">
       <h3>Items ({{ items().length }})</h3>
-      <mat-chip-set>
-        <mat-chip *ngFor="let item of items()" [removable]="true" (removed)="onRemoveItem(item)">
-          {{ item }}
-          <button matChipRemove>
-            <mat-icon>cancel</mat-icon>
+      <div class="items-grid">
+        <div *ngFor="let item of items(); let i = index" class="item-card">
+          <div 
+            *ngIf="!isEditingItem(i)" 
+            class="item-display"
+            (click)="!isDisabled() && startEditingItem(i, item)">
+            <span class="item-name">{{ item }}</span>
+          </div>
+          
+          <div *ngIf="isEditingItem(i)" class="item-edit">
+            <mat-form-field appearance="outline" class="item-edit-field">
+              <input 
+                matInput 
+                [(ngModel)]="editingItemValue"
+                (keyup.enter)="saveItemEdit(item)"
+                (keyup.escape)="cancelEditingItem()"
+                placeholder="Item name">
+            </mat-form-field>
+            <button mat-icon-button color="primary" (click)="saveItemEdit(item)">
+              <mat-icon>check</mat-icon>
+            </button>
+            <button mat-icon-button (click)="cancelEditingItem()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          
+          <button 
+            *ngIf="!isEditingItem(i)"
+            mat-icon-button 
+            color="warn"
+            class="delete-button"
+            (click)="$event.stopPropagation(); onRemoveItem(item)"
+            [disabled]="isDisabled()">
+            <mat-icon>delete</mat-icon>
           </button>
-        </mat-chip>
-      </mat-chip-set>
+        </div>
+      </div>
     </div>
   </mat-card-content>
 

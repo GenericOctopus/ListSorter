@@ -20,10 +20,67 @@
       color: rgba(0, 0, 0, 0.87);
     }
 
-    mat-chip-set {
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .item-card {
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      background-color: white;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      transition: all 0.2s ease;
       gap: 0.5rem;
+      overflow: hidden;
+
+      &:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(103, 126, 234, 0.2);
+      }
+
+      .item-display {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+          background-color: rgba(103, 126, 234, 0.05);
+        }
+
+        .item-name {
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .item-edit {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        padding: 0.5rem 0.5rem 0.5rem 1rem;
+
+        .item-edit-field {
+          flex: 1;
+          margin-bottom: 0;
+
+          ::ng-deep .mat-mdc-form-field-wrapper {
+            padding-bottom: 0;
+          }
+        }
+      }
+
+      .delete-button {
+        flex-shrink: 0;
+        margin-right: 0.25rem;
+      }
     }
   }
 }

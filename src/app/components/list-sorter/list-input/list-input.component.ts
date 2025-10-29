@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -47,6 +47,11 @@ export class ListInputComponent {
   clearList = output<void>();
   fileSelected = output<File>();
   addPastedItems = output<void>();
+  editItem = output<{ oldName: string; newName: string }>();
+
+  // Edit state
+  protected editingItemIndex = signal<number | null>(null);
+  protected editingItemValue = signal('');
 
   constructor(private snackBar: MatSnackBar) {}
 
@@ -98,5 +103,27 @@ export class ListInputComponent {
 
   onAddPastedItems(): void {
     this.addPastedItems.emit();
+  }
+
+  // Item editing
+  startEditingItem(index: number, currentName: string): void {
+    this.editingItemIndex.set(index);
+    this.editingItemValue.set(currentName);
+  }
+
+  saveItemEdit(oldName: string): void {
+    const newName = this.editingItemValue().trim();
+    if (newName && newName !== oldName) {
+      this.editItem.emit({ oldName, newName });
+    }
+    this.editingItemIndex.set(null);
+  }
+
+  cancelEditingItem(): void {
+    this.editingItemIndex.set(null);
+  }
+
+  isEditingItem(index: number): boolean {
+    return this.editingItemIndex() === index;
   }
 }

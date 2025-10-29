@@ -93,6 +93,16 @@ export class ListSorterComponent {
     this.items.update(items => items.filter(i => i !== item));
   }
 
+  editItemInList(event: { oldName: string; newName: string }): void {
+    const itemsArray = [...this.items()];
+    const index = itemsArray.indexOf(event.oldName);
+    if (index !== -1) {
+      itemsArray[index] = event.newName;
+      this.items.set(itemsArray);
+      this.snackBar.open('Item name updated', 'Close', { duration: 2000 });
+    }
+  }
+
   async startSort(forceFullSort: boolean = false): Promise<void> {
     if (!this.canStartSort()) {
       return;
@@ -443,5 +453,45 @@ export class ListSorterComponent {
     } catch (error) {
       console.error('Error saving list:', error);
     }
+  }
+  
+  // Update list name
+  updateListName(newName: string): void {
+    this.listName.set(newName);
+    this.saveCurrentList();
+    this.snackBar.open('List name updated', 'Close', { duration: 2000 });
+  }
+  
+  // Update item name
+  updateItemName(event: { tierIndex: number; itemIndex: number; oldName: string; newName: string }): void {
+    // Update in tieredItems
+    const tiers = [...this.tieredItems()];
+    if (tiers[event.tierIndex]) {
+      tiers[event.tierIndex] = {
+        ...tiers[event.tierIndex],
+        items: [...tiers[event.tierIndex].items]
+      };
+      tiers[event.tierIndex].items[event.itemIndex] = event.newName;
+      this.tieredItems.set(tiers);
+    }
+    
+    // Update in items array
+    const itemsArray = [...this.items()];
+    const itemIndex = itemsArray.indexOf(event.oldName);
+    if (itemIndex !== -1) {
+      itemsArray[itemIndex] = event.newName;
+      this.items.set(itemsArray);
+    }
+    
+    // Update in sortedItems array
+    const sortedArray = [...this.sortedItems()];
+    const sortedIndex = sortedArray.indexOf(event.oldName);
+    if (sortedIndex !== -1) {
+      sortedArray[sortedIndex] = event.newName;
+      this.sortedItems.set(sortedArray);
+    }
+    
+    this.saveCurrentList();
+    this.snackBar.open('Item name updated', 'Close', { duration: 2000 });
   }
 }

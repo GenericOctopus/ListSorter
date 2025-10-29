@@ -1,6 +1,31 @@
 <mat-card class="results-card">
   <mat-card-header>
-    <mat-card-title>{{ listName() }} - Tier List</mat-card-title>
+    <mat-card-title>
+      <div class="list-name-container">
+        <span *ngIf="!editingListName()" class="list-name-display">
+          {{ listName() }} - Tier List
+          <button mat-icon-button (click)="startEditingListName()" class="edit-icon-button">
+            <mat-icon>edit</mat-icon>
+          </button>
+        </span>
+        <div *ngIf="editingListName()" class="list-name-edit">
+          <mat-form-field appearance="outline" class="list-name-field">
+            <input 
+              matInput 
+              [(ngModel)]="editingListNameValue"
+              (keyup.enter)="saveListName()"
+              (keyup.escape)="cancelEditingListName()"
+              placeholder="List name">
+          </mat-form-field>
+          <button mat-icon-button color="primary" (click)="saveListName()">
+            <mat-icon>check</mat-icon>
+          </button>
+          <button mat-icon-button (click)="cancelEditingListName()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-title>
     <mat-card-subtitle>Your personalized ranking organized by tiers (drag items to reorder)</mat-card-subtitle>
   </mat-card-header>
 
@@ -32,10 +57,34 @@
         (cdkDropListDropped)="onItemDrop($event)">
         <div 
           class="tier-item" 
-          *ngFor="let item of tierGroup.items"
+          *ngFor="let item of tierGroup.items; let itemIndex = index"
           cdkDrag>
           <mat-icon class="drag-handle" cdkDragHandle>drag_indicator</mat-icon>
-          <span class="item-text">{{ item }}</span>
+          
+          <span 
+            *ngIf="!isEditingItem(tierIndex, itemIndex)" 
+            class="item-text"
+            (click)="startEditingItem(tierIndex, itemIndex, item)">
+            {{ item }}
+          </span>
+          
+          <div *ngIf="isEditingItem(tierIndex, itemIndex)" class="item-edit">
+            <mat-form-field appearance="outline" class="item-name-field">
+              <input 
+                matInput 
+                [(ngModel)]="editingItemValue"
+                (keyup.enter)="saveItemName(tierIndex, itemIndex, item)"
+                (keyup.escape)="cancelEditingItem()"
+                placeholder="Item name">
+            </mat-form-field>
+            <button mat-icon-button color="primary" (click)="saveItemName(tierIndex, itemIndex, item)">
+              <mat-icon>check</mat-icon>
+            </button>
+            <button mat-icon-button (click)="cancelEditingItem()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          
           <div class="drag-placeholder" *cdkDragPlaceholder></div>
         </div>
       </div>
