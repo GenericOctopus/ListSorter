@@ -1,11 +1,15 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { createRxDatabase, RxDatabase, RxCollection, removeRxDatabase } from 'rxdb';
+import { createRxDatabase, RxDatabase, RxCollection, removeRxDatabase, addRxPlugin } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { replicateRxCollection, RxReplicationState } from 'rxdb/plugins/replication';
+import { RxDBUpdatePlugin } from 'rxdb/plugins/update';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+
+// Add RxDB update plugin
+addRxPlugin(RxDBUpdatePlugin);
 import { 
   sortedListSchema, 
   SortedListDocument, 

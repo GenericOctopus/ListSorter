@@ -33,36 +33,75 @@ export class MergeSortService {
   private pendingComparisons: ComparisonPair[] = [];
   private resolveComparison: ((result: number) => void) | null = null;
   private sortPromiseResolve: ((result: string[]) => void) | null = null;
+  private sortedItems: string[] = [];
+  private newItems: string[] = [];
 
-  async startSort(items: string[]): Promise<string[]> {
+  async startSort(items: string[], sortedItems?: string[]): Promise<string[]> {
     this.items = [...items];
     this.comparisons.clear();
     this.pendingComparisons = [];
     
-    // Estimate total comparisons (worst case for merge sort is n * log(n))
-    const estimatedComparisons = Math.ceil(items.length * Math.log2(items.length));
-    
-    this.updateState({
-      isActive: true,
-      currentPair: null,
-      progress: 0,
-      totalComparisons: estimatedComparisons,
-      completedComparisons: 0
-    });
-
-    return new Promise((resolve) => {
-      this.sortPromiseResolve = resolve;
-      this.performMergeSort(this.items).then((sorted) => {
-        this.updateState({
-          isActive: false,
-          currentPair: null,
-          progress: 100,
-          totalComparisons: this.sortStateSubject.value.totalComparisons,
-          completedComparisons: this.sortStateSubject.value.totalComparisons
-        });
-        resolve(sorted);
+    // If we have already sorted items, only sort the new ones
+    if (sortedItems && sortedItems.length > 0) {
+      this.sortedItems = [...sortedItems];
+      this.newItems = items.filter(item => !sortedItems.includes(item));
+      
+      if (this.newItems.length === 0) {
+        // No new items, return the sorted list as-is
+        return sortedItems;
+      }
+      
+      // Estimate comparisons for incremental sort (binary search for each new item)
+      const estimatedComparisons = this.newItems.length * Math.ceil(Math.log2(sortedItems.length + 1));
+      
+      this.updateState({
+        isActive: true,
+        currentPair: null,
+        progress: 0,
+        totalComparisons: estimatedComparisons,
+        completedComparisons: 0
       });
-    });
+
+      return new Promise((resolve) => {
+        this.sortPromiseResolve = resolve;
+        this.performIncrementalSort().then((sorted) => {
+          this.updateState({
+            isActive: false,
+            currentPair: null,
+            progress: 100,
+            totalComparisons: this.sortStateSubject.value.totalComparisons,
+            completedComparisons: this.sortStateSubject.value.totalComparisons
+          });
+          resolve(sorted);
+        });
+      });
+    } else {
+      // Full sort from scratch
+      // Estimate total comparisons (worst case for merge sort is n * log(n))
+      const estimatedComparisons = Math.ceil(items.length * Math.log2(items.length));
+      
+      this.updateState({
+        isActive: true,
+        currentPair: null,
+        progress: 0,
+        totalComparisons: estimatedComparisons,
+        completedComparisons: 0
+      });
+
+      return new Promise((resolve) => {
+        this.sortPromiseResolve = resolve;
+        this.performMergeSort(this.items).then((sorted) => {
+          this.updateState({
+            isActive: false,
+            currentPair: null,
+            progress: 100,
+            totalComparisons: this.sortStateSubject.value.totalComparisons,
+            completedComparisons: this.sortStateSubject.value.totalComparisons
+          });
+          resolve(sorted);
+        });
+      });
+    }
   }
 
   private async performMergeSort(arr: string[]): Promise<string[]> {
@@ -122,7 +161,9 @@ export class MergeSortService {
     
     const currentState = this.sortStateSubject.value;
     const completedComparisons = currentState.completedComparisons + 1;
-    const progress = Math.round((completedComparisons / currentState.totalComparisons) * 100);
+    const progress = currentState.totalComparisons > 0 
+      ? Math.round((completedComparisons / currentState.totalComparisons) * 100)
+      : 0;
 
     this.updateState({
       ...currentState,
@@ -158,5 +199,47 @@ export class MergeSortService {
 
   private updateState(state: SortState): void {
     this.sortStateSubject.next(state);
+  }
+
+  /**
+   * Incrementally sort new items into an already sorted list using binary search
+   */
+  private async performIncrementalSort(): Promise<string[]> {
+    let result = [...this.sortedItems];
+    
+    // Insert each new item into the sorted list
+    for (const newItem of this.newItems) {
+      const position = await this.findInsertPosition(result, newItem);
+      result.splice(position, 0, newItem);
+    }
+    
+    return result;
+  }
+
+  /**
+   * Use binary search with user comparisons to find the correct position for a new item
+   */
+  private async findInsertPosition(sortedArray: string[], newItem: string): Promise<number> {
+    if (sortedArray.length === 0) {
+      return 0;
+    }
+    
+    let left = 0;
+    let right = sortedArray.length;
+    
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const comparison = await this.compare(newItem, sortedArray[mid]);
+      
+      if (comparison <= 0) {
+        // newItem should go before or at mid position
+        right = mid;
+      } else {
+        // newItem should go after mid position
+        left = mid + 1;
+      }
+    }
+    
+    return left;
   }
 }

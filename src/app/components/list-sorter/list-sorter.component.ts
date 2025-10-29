@@ -101,7 +101,11 @@ export class ListSorterComponent {
     this.showResults.set(false);
     
     try {
-      const sorted = await this.mergeSortService.startSort(this.items());
+      // Check if we have already sorted items to enable incremental sorting
+      const existingSortedItems = this.sortedItems().length > 0 ? this.sortedItems() : undefined;
+      
+      // Pass existing sorted items to enable incremental sorting
+      const sorted = await this.mergeSortService.startSort(this.items(), existingSortedItems);
       this.sortedItems.set(sorted);
       
       // Calculate tiers
@@ -111,8 +115,11 @@ export class ListSorterComponent {
       this.showResults.set(true);
       
       // Save to database (update existing or create new)
+      // Generate ID if this is a new list, otherwise use existing ID
+      const listId = this.currentListId() || `list_${Date.now()}`;
+      
       const list: SortedList = {
-        _id: this.currentListId(),
+        _id: listId,
         listName: this.listName(),
         items: this.items(),
         sortedItems: sorted,
@@ -124,7 +131,7 @@ export class ListSorterComponent {
       
       console.log('About to save list:', list);
       
-      // If updating an existing list, get the _rev
+      // If updating an existing list, get the _rev and preserve creation date
       if (this.currentListId()) {
         const existing = await this.databaseService.getSortedList(this.currentListId()!);
         if (existing && existing._rev) {
@@ -135,13 +142,18 @@ export class ListSorterComponent {
       
       await this.databaseService.saveSortedList(list);
       console.log('List saved, reloading lists...');
-      this.currentListId.set(list._id); // Store the list ID
+      this.currentListId.set(listId); // Store the list ID
       await this.loadLists();
       
-      this.snackBar.open('Sort completed and saved!', 'Close', { duration: 3000 });
-    } catch (error) {
+      const wasIncremental = existingSortedItems && existingSortedItems.length > 0;
+      const message = wasIncremental 
+        ? 'New items sorted and added to list!' 
+        : 'Sort completed and saved!';
+      this.snackBar.open(message, 'Close', { duration: 3000 });
+    } catch (error: any) {
       console.error('Error during sorting/saving:', error);
-      this.snackBar.open('Error during sorting', 'Close', { duration: 3000 });
+      console.error('Error details:', error?.message, error?.stack);
+      this.snackBar.open(`Error during sorting: ${error?.message || 'Unknown error'}`, 'Close', { duration: 5000 });
     }
   }
 
@@ -397,11 +409,13 @@ export class ListSorterComponent {
     }
     
     try {
+      const sortedItems = this.tieredItems().flatMap(tier => tier.items);
+      
       const list: SortedList = {
         _id: this.currentListId(),
         listName: this.listName(),
         items: this.items(),
-        sortedItems: this.tieredItems().flatMap(tier => tier.items),
+        sortedItems,
         tieredItems: this.tieredItems(),
         completed: true,
         createdAt: new Date(),
