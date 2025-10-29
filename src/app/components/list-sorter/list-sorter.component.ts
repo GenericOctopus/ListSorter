@@ -333,29 +333,54 @@ export class ListSorterComponent {
     const tiers: TierGroup[] = [];
     let currentIndex = 0;
     
+    // Calculate tier sizes using floor to avoid over-allocation
+    const tierSizes: number[] = [];
+    let allocatedItems = 0;
+    
     for (let i = 0; i < this.tierNames.length; i++) {
-      // Skip tiers with 0% allocation
+      if (percentages[i] === 0) {
+        tierSizes.push(0);
+        continue;
+      }
+      
+      const exactSize = itemCount * percentages[i] / 100;
+      const tierSize = Math.floor(exactSize);
+      tierSizes.push(tierSize);
+      allocatedItems += tierSize;
+    }
+    
+    // Distribute remaining items (due to rounding) to tiers with largest fractional parts
+    let remainingItems = itemCount - allocatedItems;
+    if (remainingItems > 0) {
+      const fractionalParts = percentages.map((pct, i) => ({
+        index: i,
+        fraction: (itemCount * pct / 100) - tierSizes[i]
+      }));
+      
+      // Sort by fractional part descending
+      fractionalParts.sort((a, b) => b.fraction - a.fraction);
+      
+      // Give one extra item to tiers with largest fractional parts
+      for (let i = 0; i < remainingItems; i++) {
+        tierSizes[fractionalParts[i].index]++;
+      }
+    }
+    
+    // Build tier groups
+    for (let i = 0; i < this.tierNames.length; i++) {
       if (percentages[i] === 0) {
         continue;
       }
       
-      // Calculate tier size based on percentage
-      const tierSize = itemCount > 0 ? Math.max(1, Math.round(itemCount * percentages[i] / 100)) : 0;
+      const tierSize = tierSizes[i];
       const endIndex = Math.min(currentIndex + tierSize, itemCount);
       
-      // Always create the tier if percentage > 0, even if it's empty
       tiers.push({
         tier: this.tierNames[i],
         items: currentIndex < itemCount ? sortedItems.slice(currentIndex, endIndex) : []
       });
       
       currentIndex = endIndex;
-    }
-    
-    // If there are remaining items (due to rounding), add them to the last non-zero tier
-    if (currentIndex < itemCount && tiers.length > 0) {
-      const lastTier = tiers[tiers.length - 1];
-      lastTier.items.push(...sortedItems.slice(currentIndex));
     }
     
     return tiers;
