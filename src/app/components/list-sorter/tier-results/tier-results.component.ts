@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TierGroup } from '../../../services/database.service';
 import { TierSettingsComponent } from '../tier-settings/tier-settings.component';
@@ -23,7 +24,8 @@ import { TierSettingsComponent } from '../tier-settings/tier-settings.component'
     MatInputModule,
     MatFormFieldModule,
     DragDropModule,
-    TierSettingsComponent
+    TierSettingsComponent,
+    MatMenuModule
   ],
   templateUrl: './tier-results.component.html',
   styleUrl: './tier-results.component.scss'
@@ -88,7 +90,7 @@ export class TierResultsComponent {
       .filter((_, index) => index !== currentIndex);
   }
 
-  async copyToClipboard(): Promise<void> {
+  async copyToClipboardWithFormatting(): Promise<void> {
     const tierList = this.formatTierListAsText();
     
     try {
@@ -97,6 +99,18 @@ export class TierResultsComponent {
     } catch (error) {
       // Fallback for browsers that don't support clipboard API
       this.fallbackCopyToClipboard(tierList);
+    }
+  }
+
+  async copyToClipboardItemsOnly(): Promise<void> {
+    const itemsList = this.formatItemsOnlyAsText();
+    
+    try {
+      await navigator.clipboard.writeText(itemsList);
+      this.snackBar.open('Items copied to clipboard!', 'Close', { duration: 3000 });
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      this.fallbackCopyToClipboard(itemsList);
     }
   }
 
@@ -115,6 +129,18 @@ export class TierResultsComponent {
     }
 
     return lines.join('\n');
+  }
+
+  private formatItemsOnlyAsText(): string {
+    const items: string[] = [];
+    
+    for (const tierGroup of this.tieredItems()) {
+      for (const item of tierGroup.items) {
+        items.push(item);
+      }
+    }
+
+    return items.join('\n');
   }
 
   private fallbackCopyToClipboard(text: string): void {

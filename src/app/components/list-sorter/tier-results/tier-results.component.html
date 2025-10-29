@@ -89,10 +89,21 @@
   </mat-card-content>
 
   <mat-card-actions>
-    <button mat-raised-button color="primary" (click)="copyToClipboard()">
+    <button mat-raised-button color="primary" [matMenuTriggerFor]="copyMenu">
       <mat-icon>content_copy</mat-icon>
       Copy to Clipboard
+      <mat-icon>arrow_drop_down</mat-icon>
     </button>
+    <mat-menu #copyMenu="matMenu">
+      <button mat-menu-item (click)="copyToClipboardWithFormatting()">
+        <mat-icon>format_list_bulleted</mat-icon>
+        <span>Copy with Tier Formatting</span>
+      </button>
+      <button mat-menu-item (click)="copyToClipboardItemsOnly()">
+        <mat-icon>list</mat-icon>
+        <span>Copy Items Only</span>
+      </button>
+    </mat-menu>
     <button mat-raised-button color="accent" (click)="onHideResults()">
       <mat-icon>edit</mat-icon>
       Add More Items
