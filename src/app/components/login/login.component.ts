@@ -26,7 +26,7 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./login.component.scss'],
 })
 export class LoginComponent {
-  username = '';
+  email = '';
   password = '';
   loading = false;
   error = '';
@@ -37,15 +37,15 @@ export class LoginComponent {
   ) {}
 
   async onSubmit() {
-    if (!this.username || !this.password) {
-      this.error = 'Please enter both username and password';
+    if (!this.email || !this.password) {
+      this.error = 'Please enter both email and password';
       return;
     }
 
     this.loading = true;
     this.error = '';
 
-    const result = await this.authService.login(this.username, this.password);
+    const result = await this.authService.login(this.email, this.password);
 
     this.loading = false;
 

@@ -19,21 +19,8 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './auth-widget.component.html',
   styleUrls: ['./auth-widget.component.scss'],
 })
-export class AuthWidgetComponent implements OnInit {
+export class AuthWidgetComponent {
   authService = inject(AuthService);
-  isAuthServerAvailable = signal(false);
-  isChecking = signal(true);
-
-  async ngOnInit() {
-    await this.checkAuthServer();
-  }
-
-  private async checkAuthServer(): Promise<void> {
-    this.isChecking.set(true);
-    const available = await this.authService.checkServerAvailability();
-    this.isAuthServerAvailable.set(available);
-    this.isChecking.set(false);
-  }
 
   logout(): void {
     this.authService.logout();

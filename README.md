@@ -1,73 +1,61 @@
 # ListSorter
 
-A powerful Angular application for sorting and ranking lists using merge sort algorithm with tier-based results. Features user authentication, offline support, and automatic cloud synchronization with CouchDB.
+A powerful Angular application for sorting and ranking lists using merge sort algorithm with tier-based results. Features user authentication, offline support, and automatic cloud synchronization with AppWrite.
 
 ## Features
 
-- 🔐 **User Authentication** - Secure login and registration
+- 🔐 **User Authentication** - Secure email-based authentication with AppWrite
 - 📊 **Merge Sort Algorithm** - Efficient pairwise comparison sorting
 - 🎯 **Tier-Based Results** - Organize items into customizable tiers (S, A, B, C, etc.)
-- 💾 **Offline Support** - Works offline with local PouchDB storage
-- ☁️ **Cloud Sync** - Automatic bidirectional sync with CouchDB
+- 💾 **Offline Support** - Works offline with local RxDB storage (Dexie)
+- ☁️ **Cloud Sync** - Automatic bidirectional sync with AppWrite
 - 📱 **PWA Support** - Install as a Progressive Web App
 - 🎨 **Material Design** - Modern UI with Angular Material
 - 🔄 **Drag & Drop** - Reorder items with intuitive drag and drop
+- ⚡ **Reactive Data** - Real-time updates with RxDB observables
 
 ## Quick Start
 
-### 🐳 Docker Deployment (Recommended)
+### ⚡ AppWrite Setup (5 minutes)
 
-The easiest way to get started:
-
-```bash
-# One command to start everything
-./docker-start.sh
-```
-
-This starts:
-- CouchDB (with auto-configured CORS)
-- Authentication server
-- Angular frontend (production build)
-
-Access at: **http://localhost**
-
-See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for details.
-
-### 💻 Local Development Setup
-
-#### Prerequisites
-
-- Node.js and npm
-- CouchDB installed and running
-- Angular CLI
-
-#### Setup with Authentication
-
-1. **Run the automated setup**:
+1. **Start AppWrite**:
    ```bash
-   ./setup-auth.sh
+   docker run -d --name appwrite -p 80:80 -e _APP_OPENSSL_KEY_V1=your-secret-key appwrite/appwrite:latest
    ```
 
-2. **Start both servers**:
+2. **Configure AppWrite** (http://localhost):
+   - Create project and copy Project ID
+   - Create database: `list-sorter-db`
+   - Create collection: `lists` (see [QUICKSTART_APPWRITE.md](./QUICKSTART_APPWRITE.md) for attributes)
+   - Enable Email/Password auth
+
+3. **Update environment**:
+   Edit `src/environments/environment.ts` with your Project ID
+
+4. **Run the app**:
    ```bash
-   ./dev.sh
+   npm install
+   npm start
    ```
 
-3. **Open the app**: http://localhost:4200
+5. **Open http://localhost:4200** and register!
 
-4. **Register an account** and start sorting!
+📖 **Detailed Guide**: [QUICKSTART_APPWRITE.md](./QUICKSTART_APPWRITE.md)
 
-For detailed setup instructions, see [QUICKSTART.md](./QUICKSTART.md)
-
-### Development server (without auth)
-
-To start just the Angular app:
+### 💻 Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm start
+
+# Build for production
+npm run build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+The app will run at `http://localhost:4200/` with hot reload enabled.
 
 ## Code scaffolding
 
@@ -113,10 +101,12 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 ## Documentation
 
-- **[DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md)** - Docker deployment guide (recommended)
-- **[QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
-- **[AUTH_SETUP.md](./AUTH_SETUP.md)** - Detailed authentication setup guide
-- **[auth-server/README.md](./auth-server/README.md)** - Auth server API reference
+### AppWrite + RxDB (Current)
+- **[QUICKSTART_APPWRITE.md](./QUICKSTART_APPWRITE.md)** - Get started in 5 minutes
+- **[APPWRITE_SETUP.md](./APPWRITE_SETUP.md)** - Detailed AppWrite setup guide
+- **[MIGRATION_NOTES.md](./MIGRATION_NOTES.md)** - What changed from CouchDB/PouchDB
+
+### General
 - **[README_APP.md](./README_APP.md)** - Application features and usage
 - **[PWA-SETUP.md](./PWA-SETUP.md)** - Progressive Web App setup
 - **[DRAG_DROP_FEATURE.md](./DRAG_DROP_FEATURE.md)** - Drag and drop implementation
@@ -129,56 +119,51 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ Auth Service │  │   Database   │  │  Components  │  │
 │  │              │  │   Service    │  │              │  │
-│  │  - Login     │  │  - PouchDB   │  │  - Sorting   │  │
-│  │  - Register  │  │  - Sync      │  │  - Results   │  │
-│  │  - JWT       │  │  - Offline   │  │  - Lists     │  │
+│  │  - AppWrite  │  │  - RxDB      │  │  - Sorting   │  │
+│  │  - Email     │  │  - Dexie     │  │  - Results   │  │
+│  │  - Sessions  │  │  - Reactive  │  │  - Lists     │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────────────┘  │
 │         │                 │                              │
 └─────────┼─────────────────┼──────────────────────────────┘
           │                 │
-          │ HTTP            │ Sync (PouchDB Protocol)
+          │ AppWrite SDK    │ Replication (Push/Pull)
           │                 │
           ▼                 ▼
-┌─────────────────┐  ┌─────────────────┐
-│  Auth Server    │  │    CouchDB      │
-│  (Node.js)      │  │                 │
-│                 │  │  - _users DB    │
-│  - Register     │  │  - Per-user DBs │
-│  - Login        │  │  - Replication  │
-│  - JWT Tokens   │  │                 │
-└─────────┬───────┘  └─────────────────┘
-          │
-          │ Admin API
-          │
-          ▼
-    CouchDB _users
+┌──────────────────────────────────────┐
+│            AppWrite Server            │
+│                                       │
+│  ┌─────────────┐  ┌─────────────┐   │
+│  │    Auth     │  │  Database   │   │
+│  │             │  │             │   │
+│  │ - Users     │  │ - Lists     │   │
+│  │ - Sessions  │  │ - Per-user  │   │
+│  │ - Email     │  │ - Realtime  │   │
+│  └─────────────┘  └─────────────┘   │
+└──────────────────────────────────────┘
 ```
 
 ## Scripts
-
-### Docker
-- `./docker-start.sh` - Start all services with Docker (recommended)
-- `docker-compose up -d` - Start services in background
-- `docker-compose down` - Stop all services
-- `docker-compose logs -f` - View logs
 
 ### Development
 - `npm start` - Start Angular development server
 - `npm run build` - Build for production
 - `npm test` - Run unit tests
-- `./setup-auth.sh` - Automated authentication setup
-- `./dev.sh` - Start both auth server and Angular app
+
+### AppWrite
+- `docker run -d --name appwrite -p 80:80 appwrite/appwrite:latest` - Start AppWrite
 
 ## Technology Stack
 
 - **Frontend**: Angular 20, Angular Material, RxJS
-- **Database**: PouchDB (local), CouchDB (remote)
-- **Authentication**: JWT, Express.js
+- **Database**: RxDB (local), AppWrite (remote)
+- **Storage**: Dexie.js (IndexedDB wrapper)
+- **Authentication**: AppWrite SDK
 - **PWA**: Angular Service Worker
 - **Build**: Vite, Angular CLI
 
 ## Additional Resources
 
 - [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
-- [CouchDB Documentation](https://docs.couchdb.org/)
-- [PouchDB Documentation](https://pouchdb.com/)
+- [AppWrite Documentation](https://appwrite.io/docs)
+- [RxDB Documentation](https://rxdb.info/)
+- [Dexie.js Documentation](https://dexie.org/)
