@@ -1,5 +1,5 @@
-import { Component, input, output, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, input, output, signal, computed, viewChild } from '@angular/core';
+import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,12 +8,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatStepper } from '@angular/material/stepper';
 
 @Component({
   selector: 'app-list-input',
   standalone: true,
   imports: [
     CommonModule,
+    NgIf,
+    NgFor,
     FormsModule,
     MatCardModule,
     MatButtonModule,
@@ -21,7 +25,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
     MatFormFieldModule,
     MatChipsModule,
     MatIconModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatStepperModule
   ],
   templateUrl: './list-input.component.html',
   styleUrl: './list-input.component.scss'
@@ -52,6 +57,18 @@ export class ListInputComponent {
   // Edit state
   protected editingItemIndex = signal<number | null>(null);
   protected editingItemValue = signal('');
+
+  // Stepper reference
+  stepper = viewChild<MatStepper>('stepper');
+
+  // Computed signals for stepper validation
+  protected isStep1Valid = computed(() => {
+    return this.listName().trim().length > 0;
+  });
+
+  protected isStep2Valid = computed(() => {
+    return this.items().length >= 2;
+  });
 
   constructor(private snackBar: MatSnackBar) {}
 
@@ -125,5 +142,27 @@ export class ListInputComponent {
 
   isEditingItem(index: number): boolean {
     return this.editingItemIndex() === index;
+  }
+
+  // Stepper navigation methods
+  goToNextStep(): void {
+    const stepperInstance = this.stepper();
+    if (stepperInstance) {
+      stepperInstance.next();
+    }
+  }
+
+  goToPreviousStep(): void {
+    const stepperInstance = this.stepper();
+    if (stepperInstance) {
+      stepperInstance.previous();
+    }
+  }
+
+  resetStepper(): void {
+    const stepperInstance = this.stepper();
+    if (stepperInstance) {
+      stepperInstance.reset();
+    }
   }
 }

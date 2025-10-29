@@ -1,135 +1,219 @@
 <mat-card class="input-card">
   <mat-card-header>
     <mat-card-title>{{ currentListId() ? 'Edit Your List' : 'Create Your List' }}</mat-card-title>
-    <mat-card-subtitle>{{ currentListId() ? 'Add more items and re-sort' : 'Add items to sort based on your preferences' }}</mat-card-subtitle>
+    <mat-card-subtitle>{{ currentListId() ? 'Add more items and re-sort' : 'Follow the steps to create your list' }}</mat-card-subtitle>
   </mat-card-header>
   
   <mat-card-content>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>List Name</mat-label>
-      <input 
-        matInput 
-        [ngModel]="listName()"
-        (ngModelChange)="onListNameChange($event)"
-        placeholder="e.g., Favorite Movies"
-        [disabled]="isDisabled()">
-      <mat-icon matPrefix>label</mat-icon>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Add Item</mat-label>
-      <input 
-        matInput 
-        [ngModel]="currentItem()"
-        (ngModelChange)="onCurrentItemChange($event)"
-        (keypress)="onKeyPress($event)"
-        placeholder="Enter an item"
-        [disabled]="isDisabled()">
-      <mat-icon matPrefix>add</mat-icon>
-      <button 
-        mat-icon-button 
-        matSuffix 
-        (click)="onAddItem()"
-        [disabled]="!canAddItem()">
-        <mat-icon>add_circle</mat-icon>
-      </button>
-    </mat-form-field>
-
-    <div class="file-upload-section">
-      <input 
-        #fileInput 
-        type="file" 
-        accept=".txt,.csv" 
-        (change)="onFileSelected($event)"
-        style="display: none">
-      <button 
-        mat-stroked-button 
-        (click)="fileInput.click()"
-        [disabled]="isDisabled()">
-        <mat-icon>upload_file</mat-icon>
-        Import from File (TXT/CSV)
-      </button>
-    </div>
-
-    <div class="paste-section">
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Or Paste Your List</mat-label>
-        <textarea 
-          matInput 
-          [ngModel]="pastedText()"
-          (ngModelChange)="onPastedTextChange($event)"
-          placeholder="Paste items here (one per line or comma-separated)"
-          rows="5"
-          [disabled]="isDisabled()">
-        </textarea>
-        <mat-icon matPrefix>content_paste</mat-icon>
-      </mat-form-field>
-      <button 
-        mat-stroked-button 
-        (click)="onAddPastedItems()"
-        [disabled]="!pastedText() || pastedText().trim().length === 0 || isDisabled()">
-        <mat-icon>add_box</mat-icon>
-        Add Pasted Items
-      </button>
-    </div>
-
-    <div class="items-list" *ngIf="items().length > 0">
-      <h3>Items ({{ items().length }})</h3>
-      <div class="items-grid">
-        <div *ngFor="let item of items(); let i = index" class="item-card">
-          <div 
-            *ngIf="!isEditingItem(i)" 
-            class="item-display"
-            (click)="!isDisabled() && startEditingItem(i, item)">
-            <span class="item-name">{{ item }}</span>
-          </div>
-          
-          <div *ngIf="isEditingItem(i)" class="item-edit">
-            <mat-form-field appearance="outline" class="item-edit-field">
-              <input 
-                matInput 
-                [(ngModel)]="editingItemValue"
-                (keyup.enter)="saveItemEdit(item)"
-                (keyup.escape)="cancelEditingItem()"
-                placeholder="Item name">
-            </mat-form-field>
-            <button mat-icon-button color="primary" (click)="saveItemEdit(item)">
-              <mat-icon>check</mat-icon>
-            </button>
-            <button mat-icon-button (click)="cancelEditingItem()">
-              <mat-icon>close</mat-icon>
+    <mat-stepper #stepper linear>
+      <!-- Step 1: Name Your List -->
+      <mat-step [completed]="isStep1Valid()">
+        <ng-template matStepLabel>Name Your List</ng-template>
+        <div class="step-content">
+          <p class="step-description">Give your list a descriptive name</p>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>List Name</mat-label>
+            <input 
+              matInput 
+              [ngModel]="listName()"
+              (ngModelChange)="onListNameChange($event)"
+              placeholder="e.g., Favorite Movies"
+              [disabled]="isDisabled()">
+            <mat-icon matPrefix>label</mat-icon>
+          </mat-form-field>
+          <div class="step-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              (click)="goToNextStep()"
+              [disabled]="!isStep1Valid()">
+              Next
+              <mat-icon>arrow_forward</mat-icon>
             </button>
           </div>
-          
-          <button 
-            *ngIf="!isEditingItem(i)"
-            mat-icon-button 
-            color="warn"
-            class="delete-button"
-            (click)="$event.stopPropagation(); onRemoveItem(item)"
-            [disabled]="isDisabled()">
-            <mat-icon>delete</mat-icon>
-          </button>
         </div>
-      </div>
-    </div>
-  </mat-card-content>
+      </mat-step>
 
-  <mat-card-actions>
-    <button 
-      mat-raised-button 
-      color="primary" 
-      (click)="onStartSort()"
-      [disabled]="!canStartSort()">
-      <mat-icon>sort</mat-icon>
-      {{ currentListId() ? 'Re-Sort List' : 'Start Sorting' }}
-    </button>
-    <button 
-      mat-button 
-      (click)="onClearList()"
-      [disabled]="items().length === 0">
-      <mat-icon>clear</mat-icon>
-      Clear List
-    </button>
-  </mat-card-actions>
+      <!-- Step 2: Add Items -->
+      <mat-step [completed]="isStep2Valid()">
+        <ng-template matStepLabel>Add Items</ng-template>
+        <div class="step-content">
+          <p class="step-description">Add at least 2 items to your list</p>
+          
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Add Item</mat-label>
+            <input 
+              matInput 
+              [ngModel]="currentItem()"
+              (ngModelChange)="onCurrentItemChange($event)"
+              (keypress)="onKeyPress($event)"
+              placeholder="Enter an item"
+              [disabled]="isDisabled()">
+            <mat-icon matPrefix>add</mat-icon>
+            <button 
+              mat-icon-button 
+              matSuffix 
+              (click)="onAddItem()"
+              [disabled]="!canAddItem()">
+              <mat-icon>add_circle</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <div class="file-upload-section">
+            <input 
+              #fileInput 
+              type="file" 
+              accept=".txt,.csv" 
+              (change)="onFileSelected($event)"
+              style="display: none">
+            <button 
+              mat-stroked-button 
+              (click)="fileInput.click()"
+              [disabled]="isDisabled()">
+              <mat-icon>upload_file</mat-icon>
+              Import from File (TXT/CSV)
+            </button>
+          </div>
+
+          <div class="paste-section">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Or Paste Your List</mat-label>
+              <textarea 
+                matInput 
+                [ngModel]="pastedText()"
+                (ngModelChange)="onPastedTextChange($event)"
+                placeholder="Paste items here (one per line or comma-separated)"
+                rows="5"
+                [disabled]="isDisabled()">
+              </textarea>
+              <mat-icon matPrefix>content_paste</mat-icon>
+            </mat-form-field>
+            <button 
+              mat-stroked-button 
+              (click)="onAddPastedItems()"
+              [disabled]="!pastedText() || pastedText().trim().length === 0 || isDisabled()">
+              <mat-icon>add_box</mat-icon>
+              Add Pasted Items
+            </button>
+          </div>
+
+          <div class="items-list" *ngIf="items().length > 0">
+            <h3>Items ({{ items().length }})</h3>
+            <div class="items-grid">
+              <div *ngFor="let item of items(); let i = index" class="item-card">
+                <div 
+                  *ngIf="!isEditingItem(i)" 
+                  class="item-display"
+                  (click)="!isDisabled() && startEditingItem(i, item)">
+                  <span class="item-name">{{ item }}</span>
+                </div>
+                
+                <div *ngIf="isEditingItem(i)" class="item-edit">
+                  <mat-form-field appearance="outline" class="item-edit-field">
+                    <input 
+                      matInput 
+                      [(ngModel)]="editingItemValue"
+                      (keyup.enter)="saveItemEdit(item)"
+                      (keyup.escape)="cancelEditingItem()"
+                      placeholder="Item name">
+                  </mat-form-field>
+                  <button mat-icon-button color="primary" (click)="saveItemEdit(item)">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="cancelEditingItem()">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+                
+                <button 
+                  *ngIf="!isEditingItem(i)"
+                  mat-icon-button 
+                  color="warn"
+                  class="delete-button"
+                  (click)="$event.stopPropagation(); onRemoveItem(item)"
+                  [disabled]="isDisabled()">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button (click)="goToPreviousStep()">
+              <mat-icon>arrow_back</mat-icon>
+              Back
+            </button>
+            <button 
+              mat-raised-button 
+              color="primary" 
+              (click)="goToNextStep()"
+              [disabled]="!isStep2Valid()">
+              Next
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Step 3: Review & Start -->
+      <mat-step>
+        <ng-template matStepLabel>Review & Start</ng-template>
+        <div class="step-content">
+          <p class="step-description">Review your list and start sorting</p>
+          
+          <div class="review-section">
+            <div class="review-item">
+              <mat-icon>label</mat-icon>
+              <div class="review-content">
+                <strong>List Name:</strong>
+                <span>{{ listName() }}</span>
+              </div>
+            </div>
+            
+            <div class="review-item">
+              <mat-icon>list</mat-icon>
+              <div class="review-content">
+                <strong>Total Items:</strong>
+                <span>{{ items().length }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="items-list" *ngIf="items().length > 0">
+            <h3>Your Items</h3>
+            <div class="items-grid">
+              <div *ngFor="let item of items(); let i = index" class="item-card">
+                <div class="item-display">
+                  <span class="item-name">{{ item }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button (click)="goToPreviousStep()">
+              <mat-icon>arrow_back</mat-icon>
+              Back
+            </button>
+            <button 
+              mat-raised-button 
+              color="primary" 
+              (click)="onStartSort()"
+              [disabled]="!canStartSort()">
+              <mat-icon>sort</mat-icon>
+              {{ currentListId() ? 'Re-Sort List' : 'Start Sorting' }}
+            </button>
+            <button 
+              mat-button 
+              color="warn"
+              (click)="onClearList()"
+              [disabled]="items().length === 0">
+              <mat-icon>clear</mat-icon>
+              Clear List
+            </button>
+          </div>
+        </div>
+      </mat-step>
+    </mat-stepper>
+  </mat-card-content>
 </mat-card>
