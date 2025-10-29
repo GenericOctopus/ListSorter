@@ -41,6 +41,7 @@ export class TierResultsComponent {
   itemDrop = output<CdkDragDrop<string[]>>();
   hideResults = output<void>();
   createNewList = output<void>();
+  resortEntireList = output<void>();
 
   onShowAdvancedSettingsChange(value: boolean): void {
     this.showAdvancedSettingsChange.emit(value);
@@ -72,6 +73,10 @@ export class TierResultsComponent {
 
   onCreateNewList(): void {
     this.createNewList.emit();
+  }
+
+  onResortEntireList(): void {
+    this.resortEntireList.emit();
   }
 
   getConnectedLists(currentIndex: number): string[] {

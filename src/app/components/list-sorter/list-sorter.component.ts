@@ -93,7 +93,7 @@ export class ListSorterComponent {
     this.items.update(items => items.filter(i => i !== item));
   }
 
-  async startSort(): Promise<void> {
+  async startSort(forceFullSort: boolean = false): Promise<void> {
     if (!this.canStartSort()) {
       return;
     }
@@ -102,7 +102,8 @@ export class ListSorterComponent {
     
     try {
       // Check if we have already sorted items to enable incremental sorting
-      const existingSortedItems = this.sortedItems().length > 0 ? this.sortedItems() : undefined;
+      // Unless forceFullSort is true, then always do a full sort
+      const existingSortedItems = !forceFullSort && this.sortedItems().length > 0 ? this.sortedItems() : undefined;
       
       // Pass existing sorted items to enable incremental sorting
       const sorted = await this.mergeSortService.startSort(this.items(), existingSortedItems);
@@ -146,9 +147,11 @@ export class ListSorterComponent {
       await this.loadLists();
       
       const wasIncremental = existingSortedItems && existingSortedItems.length > 0;
-      const message = wasIncremental 
-        ? 'New items sorted and added to list!' 
-        : 'Sort completed and saved!';
+      const message = forceFullSort
+        ? 'Entire list resorted from scratch!'
+        : wasIncremental 
+          ? 'New items sorted and added to list!' 
+          : 'Sort completed and saved!';
       this.snackBar.open(message, 'Close', { duration: 3000 });
     } catch (error: any) {
       console.error('Error during sorting/saving:', error);
@@ -181,6 +184,11 @@ export class ListSorterComponent {
     this.tieredItems.set([]);
     this.showResults.set(false);
     this.currentListId.set(undefined);
+  }
+
+  async resortEntireList(): Promise<void> {
+    // Force a full resort by passing true to startSort
+    await this.startSort(true);
   }
 
   async loadList(list: SortedList): Promise<void> {
