@@ -5,6 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:local": "ng build --configuration=local",
+    "serve:local": "npx http-server dist/list-sorter/browser -p 8080",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:ListSorter": "node dist/ListSorter/server/server.mjs"

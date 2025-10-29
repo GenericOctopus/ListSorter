@@ -75,15 +75,17 @@ npm run build
 
 ### Testing PWA Locally
 ```bash
-# Build production version
-npm run build
+# Build for local testing (without GitHub Pages baseHref)
+npm run build:local
 
 # Serve with a simple HTTP server
-npx http-server dist/ListSorter/browser -p 8080
+npm run serve:local
 
 # Open http://localhost:8080
 # Check DevTools > Application > Service Workers
 ```
+
+**Note**: Use `build:local` for local testing. The default `build` command uses `/ListSorter/` baseHref for GitHub Pages deployment.
 
 ## PWA Checklist
 
