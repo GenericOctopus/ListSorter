@@ -45,7 +45,6 @@ export class ListSorterComponent {
   protected sortedItems = signal<string[]>([]);
   protected tieredItems = signal<TierGroup[]>([]);
   protected showResults = signal(false);
-  protected showAdvancedSettings = signal(false);
   
   // Tier percentages (default values)
   protected tierPercentages = signal<number[]>([10, 20, 20, 20, 20, 10]);
@@ -391,21 +390,6 @@ export class ListSorterComponent {
     this.tierPercentages.set(percentages);
   }
   
-  // Validate tier percentage input (clamp between 0-100)
-  validateTierPercentage(index: number): void {
-    const percentages = [...this.tierPercentages()];
-    let value = percentages[index];
-    
-    // Clamp value between 0 and 100
-    if (value < 0) {
-      value = 0;
-    } else if (value > 100) {
-      value = 100;
-    }
-    
-    percentages[index] = value;
-    this.tierPercentages.set(percentages);
-  }
   
   // Recalculate tiers with new percentages
   recalculateTiers(): void {

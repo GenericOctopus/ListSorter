@@ -1,0 +1,62 @@
+<div class="dialog-header">
+  <h2 mat-dialog-title>
+    <mat-icon>settings</mat-icon>
+    Advanced Settings
+  </h2>
+  <button mat-icon-button mat-dialog-close>
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content>
+  <p class="settings-info">
+    <mat-icon>info</mat-icon>
+    Customize the percentage of items in each tier. Total: {{ getTotalPercentage() }}%
+  </p>
+  
+  <div class="tier-sliders">
+    <div class="tier-slider" *ngFor="let tierName of data.tierNames; let i = index">
+      <label class="slider-label" [attr.data-tier]="tierName">
+        <span class="tier-badge">{{ tierName }}</span>
+      </label>
+      <div class="slider-input-container" [attr.data-tier]="tierName">
+        <mat-slider 
+          min="0" 
+          max="100" 
+          step="1" 
+          showTickMarks
+          discrete
+          [displayWith]="formatLabel"
+          class="tier-slider-control">
+          <input 
+            matSliderThumb 
+            [ngModel]="tierPercentages[i]"
+            (ngModelChange)="updateTierPercentage(i, $event)">
+        </mat-slider>
+        <mat-form-field appearance="outline" class="percentage-input">
+          <input 
+            matInput 
+            type="number" 
+            min="0" 
+            max="100" 
+            [ngModel]="tierPercentages[i]"
+            (ngModelChange)="updateTierPercentage(i, $event)"
+            (blur)="validateTierPercentage(i)">
+          <span matTextSuffix>%</span>
+        </mat-form-field>
+      </div>
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="onReset()">
+    <mat-icon>restore</mat-icon>
+    Reset to Defaults
+  </button>
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="onApply()">
+    <mat-icon>refresh</mat-icon>
+    Apply & Recalculate
+  </button>
+</mat-dialog-actions>

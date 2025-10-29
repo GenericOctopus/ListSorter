@@ -30,14 +30,11 @@
   </mat-card-header>
 
   <mat-card-content>
-    <!-- Advanced Settings Panel -->
+    <!-- Advanced Settings Button -->
     <app-tier-settings
       [tierPercentages]="tierPercentages()"
       [tierNames]="tierNames()"
-      [showAdvancedSettings]="showAdvancedSettings()"
-      (showAdvancedSettingsChange)="onShowAdvancedSettingsChange($event)"
       (updateTierPercentage)="onUpdateTierPercentage($event)"
-      (validateTierPercentage)="onValidateTierPercentage($event)"
       (recalculateTiers)="onRecalculateTiers()"
       (resetTierPercentages)="onResetTierPercentages()">
     </app-tier-settings>

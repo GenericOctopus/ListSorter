@@ -36,12 +36,9 @@ export class TierResultsComponent {
   tieredItems = input.required<TierGroup[]>();
   tierPercentages = input.required<number[]>();
   tierNames = input.required<string[]>();
-  showAdvancedSettings = input.required<boolean>();
 
   // Outputs
-  showAdvancedSettingsChange = output<boolean>();
   updateTierPercentage = output<{ index: number; value: number }>();
-  validateTierPercentage = output<number>();
   recalculateTiers = output<void>();
   resetTierPercentages = output<void>();
   itemDrop = output<CdkDragDrop<string[]>>();
@@ -57,16 +54,8 @@ export class TierResultsComponent {
   protected editingItem = signal<{ tierIndex: number; itemIndex: number } | null>(null);
   protected editingItemValue = signal('');
 
-  onShowAdvancedSettingsChange(value: boolean): void {
-    this.showAdvancedSettingsChange.emit(value);
-  }
-
   onUpdateTierPercentage(event: { index: number; value: number }): void {
     this.updateTierPercentage.emit(event);
-  }
-
-  onValidateTierPercentage(index: number): void {
-    this.validateTierPercentage.emit(index);
   }
 
   onRecalculateTiers(): void {
