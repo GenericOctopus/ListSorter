@@ -26,6 +26,10 @@ export class AuthService {
   private currentUserSubject: BehaviorSubject<AuthUser | null>;
   public currentUser$: Observable<AuthUser | null>;
   private isBrowser: boolean;
+  private isOnlineSubject: BehaviorSubject<boolean>;
+  public isOnline$: Observable<boolean>;
+  private appwriteAvailableSubject: BehaviorSubject<boolean>;
+  public appwriteAvailable$: Observable<boolean>;
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -44,8 +48,55 @@ export class AuthService {
     this.currentUserSubject = new BehaviorSubject<AuthUser | null>(null);
     this.currentUser$ = this.currentUserSubject.asObservable();
     
+    // Initialize connectivity tracking
+    this.isOnlineSubject = new BehaviorSubject<boolean>(this.isBrowser ? navigator.onLine : false);
+    this.isOnline$ = this.isOnlineSubject.asObservable();
+    this.appwriteAvailableSubject = new BehaviorSubject<boolean>(false);
+    this.appwriteAvailable$ = this.appwriteAvailableSubject.asObservable();
+    
     if (this.isBrowser) {
+      this.setupConnectivityListeners();
       this.checkCurrentSession();
+      this.checkAppwriteConnection();
+    }
+  }
+
+  private setupConnectivityListeners(): void {
+    if (!this.isBrowser) return;
+
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      this.isOnlineSubject.next(true);
+      this.checkAppwriteConnection();
+    });
+
+    window.addEventListener('offline', () => {
+      this.isOnlineSubject.next(false);
+      this.appwriteAvailableSubject.next(false);
+    });
+  }
+
+  private async checkAppwriteConnection(): Promise<void> {
+    if (!this.isBrowser || !navigator.onLine) {
+      this.appwriteAvailableSubject.next(false);
+      return;
+    }
+
+    try {
+      // Try to ping Appwrite health endpoint with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${environment.appwrite.endpoint}/health`, {
+        signal: controller.signal,
+        method: 'GET'
+      });
+      
+      clearTimeout(timeoutId);
+      this.appwriteAvailableSubject.next(response.ok);
+    } catch (error) {
+      console.warn('Appwrite connection check failed:', error);
+      this.appwriteAvailableSubject.next(false);
     }
   }
 
@@ -57,6 +108,7 @@ export class AuthService {
         email: session.email,
         name: session.name
       });
+      this.appwriteAvailableSubject.next(true);
     } catch (error) {
       // No active session
       this.currentUserSubject.next(null);
@@ -69,6 +121,18 @@ export class AuthService {
 
   get isAuthenticated(): boolean {
     return !!this.currentUserValue;
+  }
+
+  get isOnlineValue(): boolean {
+    return this.isOnlineSubject.value;
+  }
+
+  get appwriteAvailableValue(): boolean {
+    return this.appwriteAvailableSubject.value;
+  }
+
+  get canShowAuth(): boolean {
+    return this.isOnlineValue && this.appwriteAvailableValue;
   }
 
   async register(email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> {

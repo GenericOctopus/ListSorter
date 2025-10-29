@@ -32,3 +32,17 @@ export const publicOnlyGuard: CanActivateFn = (route, state) => {
 
   return true;
 };
+
+export const connectivityGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  // Check if user is online and Appwrite is available
+  if (!authService.isOnlineValue || !authService.appwriteAvailableValue) {
+    // Redirect to home if offline or Appwrite unavailable
+    router.navigate(['/']);
+    return false;
+  }
+
+  return true;
+};
