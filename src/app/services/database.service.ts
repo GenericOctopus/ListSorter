@@ -1,11 +1,11 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { createRxDatabase, RxDatabase, RxCollection, removeRxDatabase, addRxPlugin } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { replicateRxCollection, RxReplicationState } from 'rxdb/plugins/replication';
 import { RxDBUpdatePlugin } from 'rxdb/plugins/update';
-import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, BehaviorSubject, firstValueFrom, Subscription } from 'rxjs';
+import { map, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
 // Add RxDB update plugin
@@ -27,7 +27,7 @@ type ListSorterDatabase = RxDatabase<DatabaseCollections>;
 @Injectable({
   providedIn: 'root'
 })
-export class DatabaseService {
+export class DatabaseService implements OnDestroy {
   private db: ListSorterDatabase | null = null;
   private replicationState: RxReplicationState<SortedListDocument, any> | null = null;
   private isBrowser: boolean;
@@ -37,6 +37,11 @@ export class DatabaseService {
     isSetup: false,
     isActive: false
   });
+  private authSubscription?: Subscription;
+  private onlineSubscription?: Subscription;
+  private replicationSubscriptions: Subscription[] = [];
+  private isSettingUpSync = false;
+  private isDbReady = false;
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -51,14 +56,43 @@ export class DatabaseService {
 
     // Listen for auth changes to setup/teardown sync
     if (this.isBrowser) {
-      this.authService.currentUser$.subscribe((user) => {
+      this.authSubscription = this.authService.currentUser$.pipe(
+        distinctUntilChanged((prev, curr) => {
+          // Only emit if user actually changed (by userId)
+          return prev?.userId === curr?.userId;
+        })
+      ).subscribe((user) => {
+        console.log('Auth state changed, user:', user?.userId || 'null');
         if (user) {
           this.setupSync();
         } else {
           this.cancelSync();
         }
       });
+
+      // Listen for online status changes to trigger sync
+      this.onlineSubscription = this.authService.isOnline$.pipe(
+        distinctUntilChanged()
+      ).subscribe((isOnline) => {
+        console.log('Online status changed:', isOnline);
+        if (isOnline && this.replicationState && this.authService.currentUserValue) {
+          console.log('Triggering sync due to online status change');
+          this.forceSyncNow();
+        }
+      });
     }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscriptions
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+    }
+    if (this.onlineSubscription) {
+      this.onlineSubscription.unsubscribe();
+    }
+    // Cancel replication
+    this.cancelSync();
   }
 
   private async initDatabase(): Promise<void> {
@@ -111,8 +145,8 @@ export class DatabaseService {
       // const testQuery = await this.db.lists.find().exec();
       // console.log('Test query result - existing documents:', testQuery.length);
       
-      // Set up sync if user is authenticated (don't await ensureReady since we're already initialized)
-      this.setupSyncInternal();
+      // Note: Sync will be set up by the authService.currentUser$ subscription
+      // when a user is authenticated. No need to call setupSyncInternal here.
     } catch (error) {
       console.error('Error initializing RxDB:', error);
       throw error;
@@ -120,9 +154,15 @@ export class DatabaseService {
   }
 
   private async ensureReady(): Promise<void> {
+    // Return immediately if already ready
+    if (this.isDbReady) {
+      return;
+    }
+    
     console.log('ensureReady: waiting for dbReady promise...');
     try {
       await this.dbReady;
+      this.isDbReady = true;
       console.log('ensureReady: dbReady promise resolved');
     } catch (error) {
       console.error('ensureReady: dbReady promise rejected:', error);
@@ -131,8 +171,27 @@ export class DatabaseService {
   }
 
   private async setupSync(): Promise<void> {
-    await this.ensureReady();
-    this.setupSyncInternal();
+    // If sync is already active, don't set it up again
+    if (this.replicationState) {
+      console.log('Sync already active, skipping setup...');
+      return;
+    }
+
+    // Prevent multiple concurrent sync setup attempts
+    if (this.isSettingUpSync) {
+      console.log('Sync setup already in progress, skipping...');
+      return;
+    }
+    
+    // Set flag immediately to prevent race conditions
+    this.isSettingUpSync = true;
+    
+    try {
+      await this.ensureReady();
+      await this.setupSyncInternal();
+    } finally {
+      this.isSettingUpSync = false;
+    }
   }
 
   private async setupSyncInternal(): Promise<void> {
@@ -141,6 +200,12 @@ export class DatabaseService {
     const user = this.authService.currentUserValue;
     if (!user) return;
 
+    // Double-check we don't already have an active replication
+    if (this.replicationState) {
+      console.log('Replication already exists in setupSyncInternal, skipping...');
+      return;
+    }
+
     try {
       // Migrate local lists to the authenticated user
       const migratedCount = await this.migrateLocalListsToUser(user.userId);
@@ -148,7 +213,7 @@ export class DatabaseService {
         console.log(`Migrated ${migratedCount} local lists to user account`);
       }
 
-      // Cancel existing sync if any
+      // Cancel existing sync if any (defensive, should not be needed)
       this.cancelSync();
 
       const appwriteConfig = await this.authService.getAppwriteConfig();
@@ -160,28 +225,38 @@ export class DatabaseService {
       console.log('Setting up RxDB replication with AppWrite');
 
       // Set up replication with AppWrite
+      // Using live: false to disable continuous polling
+      // Sync will only happen on manual trigger (online status changes, user actions)
       this.replicationState = replicateRxCollection({
         collection: this.db.lists,
         replicationIdentifier: 'appwrite-lists-replication',
-        live: true,
-        retryTime: 5000,
+        live: false,
         autoStart: true,
         pull: {
           async handler(lastCheckpoint: any, batchSize: number) {
             const newCheckpoint = lastCheckpoint || 0;
+            console.log(`Pull handler called with checkpoint:`, newCheckpoint);
             try {
               const documents = await appwriteConfig.pullHandler(newCheckpoint, batchSize);
+              console.log(`Pull handler received ${documents.length} documents`);
+              // Always advance checkpoint to prevent infinite loops
+              // If we have documents, use the max updatedAt
+              // If no documents, use current timestamp to mark we've checked
+              const nextCheckpoint = documents.length > 0 
+                ? Math.max(...documents.map((d: SortedListDocument) => d.updatedAt))
+                : (newCheckpoint === 0 ? Date.now() : newCheckpoint);
+              
+              console.log(`Pull handler returning checkpoint: ${nextCheckpoint}`);
               return {
                 documents: documents.map((d: SortedListDocument) => ({ ...d, _deleted: false })),
-                checkpoint: documents.length > 0 
-                  ? Math.max(...documents.map((d: SortedListDocument) => d.updatedAt))
-                  : newCheckpoint
+                checkpoint: nextCheckpoint
               };
             } catch (error) {
               console.error('Pull replication error:', error);
+              // On error, advance checkpoint to current time to avoid retrying same point
               return {
                 documents: [],
-                checkpoint: newCheckpoint
+                checkpoint: Date.now()
               };
             }
           },
@@ -201,25 +276,36 @@ export class DatabaseService {
         }
       });
 
-      // Listen to replication events
-      this.replicationState.error$.subscribe(error => {
-        console.error('Replication error:', error);
-      });
+      // Listen to replication events and store subscriptions for cleanup
+      this.replicationSubscriptions.push(
+        this.replicationState.error$.subscribe(error => {
+          console.error('Replication error:', error);
+        })
+      );
 
-      this.replicationState.active$.subscribe(active => {
-        console.log('Replication active:', active);
-        this.updateSyncStatus();
-      });
+      this.replicationSubscriptions.push(
+        this.replicationState.active$.subscribe(active => {
+          // Only log when sync becomes active (starts), not when it becomes idle
+          if (active) {
+            console.log('Replication sync started');
+          }
+          this.updateSyncStatus();
+        })
+      );
       
       // Log when documents are received
-      this.replicationState.received$.subscribe(doc => {
-        console.log('Document received from Appwrite:', doc);
-      });
+      this.replicationSubscriptions.push(
+        this.replicationState.received$.subscribe(doc => {
+          console.log('Document received from Appwrite:', doc.id);
+        })
+      );
       
       // Log when documents are sent
-      this.replicationState.sent$.subscribe(doc => {
-        console.log('Document sent to Appwrite:', doc);
-      });
+      this.replicationSubscriptions.push(
+        this.replicationState.sent$.subscribe(doc => {
+          console.log('Document sent to Appwrite:', doc.id);
+        })
+      );
 
       this.updateSyncStatus();
       console.log('Replication setup complete');
@@ -227,13 +313,17 @@ export class DatabaseService {
       // Trigger initial sync
       console.log('Triggering initial sync...');
       await this.replicationState.reSync();
-      console.log('Initial sync triggered');
+      console.log('Initial sync complete');
     } catch (error) {
       console.error('Error setting up sync:', error);
     }
   }
 
   private cancelSync(): void {
+    // Clean up replication subscriptions
+    this.replicationSubscriptions.forEach(sub => sub.unsubscribe());
+    this.replicationSubscriptions = [];
+    
     if (this.replicationState) {
       console.log('Cancelling replication');
       this.replicationState.cancel();
@@ -269,16 +359,12 @@ export class DatabaseService {
   }
 
   async saveSortedList(list: SortedList): Promise<any> {
-    console.log('saveSortedList called, isBrowser:', this.isBrowser);
     if (!this.isBrowser) {
-      console.log('Not in browser, returning null');
       return null;
     }
     
-    console.log('Ensuring database is ready...');
     await this.ensureReady();
     
-    console.log('Database ready, db exists:', !!this.db);
     if (!this.db) {
       console.error('Database is null after ensureReady!');
       return null;
@@ -287,8 +373,6 @@ export class DatabaseService {
     const user = this.authService.currentUserValue;
     const id = list._id || `list_${Date.now()}`;
     const now = Date.now();
-    
-    console.log('User:', user, 'ID:', id);
 
     const doc: SortedListDocument = {
       id,
@@ -304,24 +388,25 @@ export class DatabaseService {
     };
 
     try {
-      console.log('Saving list with id:', id, 'userId:', doc.userId);
-      
       // Check if document exists
       const existing = await this.db.lists.findOne({
         selector: { id: id }
       }).exec();
       
       if (existing) {
-        console.log('Updating existing list');
         await existing.update({
           $set: doc
         });
       } else {
-        console.log('Inserting new list');
         await this.db.lists.insert(doc);
       }
       
-      console.log('List saved successfully');
+      // Trigger push sync if user is online and authenticated
+      if (this.replicationState && user && this.authService.isOnlineValue) {
+        console.log('Triggering push sync after save...');
+        this.forceSyncNow();
+      }
+      
       return { id };
     } catch (error) {
       console.error('Error saving list:', error);
@@ -413,6 +498,13 @@ export class DatabaseService {
       
       if (doc) {
         await doc.remove();
+        
+        // Trigger push sync if user is online and authenticated
+        const user = this.authService.currentUserValue;
+        if (this.replicationState && user && this.authService.isOnlineValue) {
+          console.log('Triggering push sync after delete...');
+          this.forceSyncNow();
+        }
       }
     } catch (error) {
       console.error('Error deleting list:', error);
