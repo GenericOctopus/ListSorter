@@ -83,20 +83,20 @@ export class AuthService {
     }
 
     try {
-      // Try to ping Appwrite health endpoint with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const response = await fetch(`${environment.appwrite.endpoint}/health`, {
-        signal: controller.signal,
-        method: 'GET'
-      });
-      
-      clearTimeout(timeoutId);
-      this.appwriteAvailableSubject.next(response.ok);
-    } catch (error) {
-      console.warn('Appwrite connection check failed:', error);
-      this.appwriteAvailableSubject.next(false);
+      // Check if we can reach Appwrite by trying to get account info
+      // This will fail with 401 if not logged in, but that means Appwrite is reachable
+      await this.account.get();
+      // If we get here, we're connected and authenticated
+      this.appwriteAvailableSubject.next(true);
+    } catch (error: any) {
+      // 401 means Appwrite is reachable but we're not authenticated - that's fine for showing auth
+      if (error?.code === 401 || error?.type === 'general_unauthorized_scope') {
+        this.appwriteAvailableSubject.next(true);
+      } else {
+        // Any other error means Appwrite is not reachable
+        console.warn('Appwrite connection check failed:', error);
+        this.appwriteAvailableSubject.next(false);
+      }
     }
   }
 
@@ -230,12 +230,12 @@ export class AuthService {
           return response.documents.map((doc: any) => ({
             id: doc.$id,
             listName: doc.listName,
-            items: doc.items,
-            sortedItems: doc.sortedItems,
-            tieredItems: doc.tieredItems,
+            items: doc.items || [],
+            sortedItems: doc.sortedItems || [],
+            tieredItems: doc.tieredItems ? JSON.parse(doc.tieredItems) : [],
             completed: doc.completed,
             createdAt: doc.createdAt,
-            completedAt: doc.completedAt,
+            completedAt: doc.completedAt || undefined,
             userId: doc.userId,
             updatedAt: doc.updatedAt
           }));
@@ -250,23 +250,30 @@ export class AuthService {
           for (const docData of docs) {
             const doc = docData.newDocumentState;
             
+            // Transform data for Appwrite
+            const appwriteData: any = {
+              listName: doc.listName,
+              items: doc.items || [],
+              sortedItems: doc.sortedItems || [],
+              tieredItems: doc.tieredItems ? JSON.stringify(doc.tieredItems) : JSON.stringify([]),
+              completed: doc.completed,
+              createdAt: doc.createdAt,
+              userId: doc.userId,
+              updatedAt: doc.updatedAt
+            };
+            
+            // Only include completedAt if it exists
+            if (doc.completedAt !== null && doc.completedAt !== undefined) {
+              appwriteData.completedAt = doc.completedAt;
+            }
+            
             try {
               // Try to update existing document
               await this.databases.updateDocument(
                 databaseId,
                 collectionId,
                 doc.id,
-                {
-                  listName: doc.listName,
-                  items: doc.items,
-                  sortedItems: doc.sortedItems || [],
-                  tieredItems: doc.tieredItems || [],
-                  completed: doc.completed,
-                  createdAt: doc.createdAt,
-                  completedAt: doc.completedAt,
-                  userId: doc.userId,
-                  updatedAt: doc.updatedAt
-                }
+                appwriteData
               );
             } catch (error: any) {
               // If document doesn't exist, create it
@@ -275,19 +282,10 @@ export class AuthService {
                   databaseId,
                   collectionId,
                   doc.id,
-                  {
-                    listName: doc.listName,
-                    items: doc.items,
-                    sortedItems: doc.sortedItems || [],
-                    tieredItems: doc.tieredItems || [],
-                    completed: doc.completed,
-                    createdAt: doc.createdAt,
-                    completedAt: doc.completedAt,
-                    userId: doc.userId,
-                    updatedAt: doc.updatedAt
-                  }
+                  appwriteData
                 );
               } else {
+                console.error('Push error for doc:', doc.id, error);
                 throw error;
               }
             }

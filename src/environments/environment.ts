@@ -1,8 +1,8 @@
 export const environment = {
-  production: false,
+  production: true,
   appwrite: {
-    endpoint: 'http://localhost/v1', // Change to your AppWrite endpoint
-    projectId: 'YOUR_PROJECT_ID',    // Replace with your AppWrite project ID
+    endpoint: 'https://nyc.cloud.appwrite.io/v1',
+    projectId: '69029a1c002a26b733a2',
     databaseId: 'list-sorter-db',
     collectionsId: {
       lists: 'lists'
