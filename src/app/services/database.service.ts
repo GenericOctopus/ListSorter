@@ -405,9 +405,12 @@ export class DatabaseService {
     if (!this.db) return null;
 
     try {
+      // Find and remove from local RxDB
+      // The replication push handler will sync the deletion to Appwrite
       const doc = await this.db.lists.findOne({
         selector: { id: id }
       }).exec();
+      
       if (doc) {
         await doc.remove();
       }

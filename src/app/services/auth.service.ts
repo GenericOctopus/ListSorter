@@ -257,6 +257,24 @@ export class AuthService {
           for (const docData of docs) {
             const doc = docData.newDocumentState;
             
+            // Handle deletions
+            if (docData.assumedMasterState?._deleted || doc._deleted) {
+              try {
+                await this.databases.deleteDocument(
+                  databaseId,
+                  collectionId,
+                  doc.id
+                );
+              } catch (error: any) {
+                // Ignore 404 errors (document already deleted)
+                if (error.code !== 404) {
+                  console.error('Failed to delete document:', doc.id, error);
+                  throw error;
+                }
+              }
+              continue; // Skip to next document
+            }
+            
             // Transform data for Appwrite
             const appwriteData: any = {
               listName: doc.listName,
