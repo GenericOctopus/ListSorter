@@ -56,9 +56,12 @@ export class DatabaseService implements OnDestroy {
 
     // Listen for auth changes to setup/teardown sync
     if (this.isBrowser) {
-      // Subscribe without distinctUntilChanged to ensure we get the initial value
-      // We'll handle duplicate setup attempts in setupSync() itself
-      this.authSubscription = this.authService.currentUser$.subscribe((user) => {
+      this.authSubscription = this.authService.currentUser$.pipe(
+        distinctUntilChanged((prev, curr) => {
+          // Only emit if user actually changed (by userId)
+          return prev?.userId === curr?.userId;
+        })
+      ).subscribe((user) => {
         console.log('Auth state changed, user:', user?.userId || 'null');
         if (user) {
           this.setupSync();
