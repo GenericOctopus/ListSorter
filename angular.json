@@ -69,6 +69,22 @@
               "outputHashing": "all",
               "serviceWorker": "ngsw-config.json",
               "optimization": true
+            },
+            "appwrite": {
+              "baseHref": "/",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "8kB"
+                }
+              ],
+              "outputHashing": "all",
+              "serviceWorker": "ngsw-config.json",
+              "optimization": true
             }
           },
           "defaultConfiguration": "production"

@@ -6,6 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "build:local": "ng build --configuration=local",
+    "build:appwrite": "ng build --configuration=appwrite && tar -czf list-sorter-appwrite.tar.gz -C dist/list-sorter/browser .",
+    "build:tar": "ng build && tar -czf list-sorter-build.tar.gz -C dist/list-sorter/browser .",
     "serve:local": "npx http-server dist/list-sorter/browser -p 8080",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
