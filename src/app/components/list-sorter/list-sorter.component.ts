@@ -5,6 +5,7 @@ import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/dr
 
 import { DatabaseService, SortedList, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
+import { AuthService } from '../../services/auth.service';
 import { ListInputComponent } from './list-input/list-input.component';
 import { SortingComparisonComponent } from './sorting-comparison/sorting-comparison.component';
 import { TierResultsComponent } from './tier-results/tier-results.component';
@@ -69,13 +70,18 @@ export class ListSorterComponent {
   constructor(
     private databaseService: DatabaseService,
     private mergeSortService: MergeSortService,
+    private authService: AuthService,
     private snackBar: MatSnackBar
   ) {
     this.mergeSortService.sortState$.subscribe(state => {
       this.sortState.set(state);
     });
     
-    this.loadLists();
+    // Subscribe to auth changes and reload lists when user logs in/out
+    this.authService.currentUser$.subscribe(user => {
+      // console.log('Auth changed, reloading lists. User:', user?.userId || 'none');
+      this.loadLists();
+    });
   }
 
   addItem(): void {

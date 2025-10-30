@@ -76,7 +76,7 @@ export class DatabaseService {
           multiInstance: false,
           ignoreDuplicate: false
         });
-        console.log('Database created successfully');
+        // console.log('Database created successfully');
       } catch (error: any) {
         // If database already exists (DB9 error), remove and recreate
         if (error.code === 'DB9' || error.parameters?.database === dbName) {
@@ -95,21 +95,21 @@ export class DatabaseService {
         }
       }
 
-      console.log('Adding collections...');
+      // console.log('Adding collections...');
       await this.db.addCollections({
         lists: {
           schema: sortedListSchema
         }
       });
-      console.log('Collections added successfully');
+      // console.log('Collections added successfully');
 
-      console.log('RxDB initialized and ready. Database:', this.db);
-      console.log('Database name:', this.db.name);
-      console.log('Collections:', Object.keys(this.db.collections));
+      // console.log('RxDB initialized and ready. Database:', this.db);
+      // console.log('Database name:', this.db.name);
+      // console.log('Collections:', Object.keys(this.db.collections));
       
       // Test query to verify database is working
-      const testQuery = await this.db.lists.find().exec();
-      console.log('Test query result - existing documents:', testQuery.length);
+      // const testQuery = await this.db.lists.find().exec();
+      // console.log('Test query result - existing documents:', testQuery.length);
       
       // Set up sync if user is authenticated (don't await ensureReady since we're already initialized)
       this.setupSyncInternal();
@@ -210,9 +210,24 @@ export class DatabaseService {
         console.log('Replication active:', active);
         this.updateSyncStatus();
       });
+      
+      // Log when documents are received
+      this.replicationState.received$.subscribe(doc => {
+        console.log('Document received from Appwrite:', doc);
+      });
+      
+      // Log when documents are sent
+      this.replicationState.sent$.subscribe(doc => {
+        console.log('Document sent to Appwrite:', doc);
+      });
 
       this.updateSyncStatus();
       console.log('Replication setup complete');
+      
+      // Trigger initial sync
+      console.log('Triggering initial sync...');
+      await this.replicationState.reSync();
+      console.log('Initial sync triggered');
     } catch (error) {
       console.error('Error setting up sync:', error);
     }
@@ -340,17 +355,14 @@ export class DatabaseService {
     const userId = user ? user.userId : 'local';
 
     try {
-      const docs = await this.db.lists
-        .find({
-          selector: {
-            userId: userId
-          },
-          sort: [{ createdAt: 'desc' }]
-        })
-        .exec();
-
-      console.log('getAllLists: Retrieved', docs.length, 'lists');
-      return docs.map(doc => this.convertToSortedList(doc.toJSON() as SortedListDocument));
+      // Get all documents and filter in memory since RxDB query isn't working
+      const allDocs = await this.db.lists.find().exec();
+      const filteredDocs = allDocs.filter(doc => doc.userId === userId);
+      
+      // Sort by createdAt descending
+      const sortedDocs = filteredDocs.sort((a, b) => b.createdAt - a.createdAt);
+      
+      return sortedDocs.map(doc => this.convertToSortedList(doc.toJSON() as SortedListDocument));
     } catch (error) {
       console.error('Error in getAllLists:', error);
       return [];
@@ -363,18 +375,23 @@ export class DatabaseService {
       return new Observable(subscriber => subscriber.next([]));
     }
 
-    const user = this.authService.currentUserValue;
-    const userId = user ? user.userId : 'local';
-
+    // Use find all and filter in memory since RxDB query isn't working
+    // Also react to auth changes by getting userId dynamically
     return this.db.lists
-      .find({
-        selector: {
-          userId: userId
-        },
-        sort: [{ createdAt: 'desc' }]
-      })
+      .find()
       .$.pipe(
-        map((docs: any[]) => docs.map((doc: any) => this.convertToSortedList(doc.toJSON() as SortedListDocument)))
+        map((docs: any[]) => {
+          // Get current userId dynamically (not captured at subscription time)
+          const user = this.authService.currentUserValue;
+          const userId = user ? user.userId : 'local';
+          
+          // Filter by userId
+          const filtered = docs.filter((doc: any) => doc.userId === userId);
+          
+          // Sort by createdAt descending
+          const sorted = filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
+          return sorted.map((doc: any) => this.convertToSortedList(doc.toJSON() as SortedListDocument));
+        })
       );
   }
 
@@ -449,8 +466,6 @@ export class DatabaseService {
         })
         .exec();
 
-      console.log(`Migrating ${localLists.length} local lists to user ${userId}`);
-
       // Update each list to the new userId
       for (const list of localLists) {
         await list.update({
@@ -464,6 +479,37 @@ export class DatabaseService {
       return localLists.length;
     } catch (error) {
       console.error('Error migrating local lists:', error);
+      return 0;
+    }
+  }
+  
+  /**
+   * Force migrate all lists to current user (for debugging)
+   */
+  async forceReclaimAllLists(): Promise<number> {
+    if (!this.isBrowser || !this.db) return 0;
+    
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      console.error('No user logged in');
+      return 0;
+    }
+
+    try {
+      const allLists = await this.db.lists.find().exec();
+
+      for (const list of allLists) {
+        await list.update({
+          $set: {
+            userId: user.userId,
+            updatedAt: Date.now()
+          }
+        });
+      }
+
+      return allLists.length;
+    } catch (error) {
+      console.error('Error force reclaiming lists:', error);
       return 0;
     }
   }

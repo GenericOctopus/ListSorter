@@ -214,12 +214,18 @@ export class AuthService {
     return {
       pullHandler: async (lastCheckpoint: number, batchSize: number): Promise<SortedListDocument[]> => {
         try {
+          // Build queries - only add greaterThan if we have a checkpoint
           const queries = [
             Query.equal('userId', userId),
-            Query.greaterThan('updatedAt', lastCheckpoint),
-            Query.limit(batchSize),
-            Query.orderAsc('updatedAt')
+            Query.limit(batchSize)
           ];
+          
+          // Only filter by updatedAt if we have a checkpoint (not initial sync)
+          if (lastCheckpoint && lastCheckpoint > 0) {
+            queries.push(Query.greaterThan('updatedAt', lastCheckpoint));
+          }
+          
+          queries.push(Query.orderAsc('updatedAt'));
 
           const response = await this.databases.listDocuments(
             databaseId,
@@ -239,8 +245,9 @@ export class AuthService {
             userId: doc.userId,
             updatedAt: doc.updatedAt
           }));
-        } catch (error) {
-          console.error('Pull handler error:', error);
+        } catch (error: any) {
+          console.error('Pull handler error:', error.message || error);
+          console.error('Error details:', { code: error.code, type: error.type });
           return [];
         }
       },
@@ -268,22 +275,27 @@ export class AuthService {
             }
             
             try {
-              // Try to update existing document
-              await this.databases.updateDocument(
+              // Try to create document first (more common for new lists)
+              await this.databases.createDocument(
                 databaseId,
                 collectionId,
                 doc.id,
                 appwriteData
               );
             } catch (error: any) {
-              // If document doesn't exist, create it
-              if (error.code === 404) {
-                await this.databases.createDocument(
-                  databaseId,
-                  collectionId,
-                  doc.id,
-                  appwriteData
-                );
+              // If document already exists, update it
+              if (error.code === 409 || error.type === 'document_already_exists') {
+                try {
+                  await this.databases.updateDocument(
+                    databaseId,
+                    collectionId,
+                    doc.id,
+                    appwriteData
+                  );
+                } catch (updateError: any) {
+                  console.error('Failed to update document:', doc.id, updateError);
+                  throw updateError;
+                }
               } else {
                 console.error('Push error for doc:', doc.id, error);
                 throw error;
