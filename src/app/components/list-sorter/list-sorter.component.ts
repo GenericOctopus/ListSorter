@@ -2,6 +2,7 @@ import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { debounceTime } from 'rxjs/operators';
 
 import { DatabaseService, SortedList, TierGroup } from '../../services/database.service';
 import { MergeSortService, SortState } from '../../services/merge-sort.service';
@@ -78,7 +79,10 @@ export class ListSorterComponent {
     });
     
     // Subscribe to auth changes and reload lists when user logs in/out
-    this.authService.currentUser$.subscribe(user => {
+    // Use debounceTime to allow migration to complete before loading lists
+    this.authService.currentUser$.pipe(
+      debounceTime(150)
+    ).subscribe(user => {
       // console.log('Auth changed, reloading lists. User:', user?.userId || 'none');
       this.loadLists();
     });
