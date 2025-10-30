@@ -34,6 +34,22 @@ form {
   width: 100%;
 }
 
+.forgot-password-link {
+  text-align: right;
+  margin-top: -8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  
+  a {
+    color: #667eea;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .error-message {
   color: #f44336;
   font-size: 14px;

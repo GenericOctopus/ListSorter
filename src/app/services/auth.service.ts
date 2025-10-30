@@ -353,6 +353,55 @@ export class AuthService {
     }
   }
 
+  async requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isBrowser) {
+      return { success: false, error: 'Not in browser environment' };
+    }
+
+    try {
+      // Get the current URL origin for the reset URL
+      const resetUrl = `${window.location.origin}/reset-password`;
+      
+      await this.account.createRecovery(email, resetUrl);
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Password reset request error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to send password reset email' 
+      };
+    }
+  }
+
+  async completePasswordReset(
+    userId: string, 
+    secret: string, 
+    password: string, 
+    passwordConfirm: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.isBrowser) {
+      return { success: false, error: 'Not in browser environment' };
+    }
+
+    // Validate passwords match on client side
+    if (password !== passwordConfirm) {
+      return { success: false, error: 'Passwords do not match' };
+    }
+
+    try {
+      await this.account.updateRecovery(userId, secret, password);
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Password reset completion error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to reset password' 
+      };
+    }
+  }
+
   getClient(): Client {
     return this.client;
   }
